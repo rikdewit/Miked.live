@@ -18,6 +18,9 @@ next-env.d.ts
 *.local
 *.tsbuildinfo
 
+# Local tool artifacts
+.playwright-mcp/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
