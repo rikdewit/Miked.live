@@ -225,7 +225,7 @@ function DashboardPageInner() {
     data, setData, updateStageItems,
     addMember, removeMember, updateMemberName,
     addMemberInstrument, updateMemberInstrument, removeMemberInstrument,
-    loadFromServer, clearSaved, isHydrated,
+    loadFromServer, isHydrated,
   } = useStagePlot()
 
   // Handle stageplot loading based on URL param
@@ -236,9 +236,8 @@ function DashboardPageInner() {
       // Load existing stageplot from server
       loadFromServer(id)
     } else {
-      // New stageplot - start fresh with initial data
+      // New stageplot - start fresh with initial data instead of localStorage
       setData(INITIAL_RIDER_DATA)
-      clearSaved()
     }
   }, [isHydrated])
 
