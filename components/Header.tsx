@@ -134,8 +134,13 @@ export const Header: React.FC = () => {
   // ── Stageplot save handler ─────────────────────────────────────────────
   const [isSavingPlot, setIsSavingPlot] = useState(false)
   const [shareStats, setShareStats] = useState<{ view_count: number; created_at: string } | null>(null)
+  const lastSavedDataRef = useRef<string | null>(null)
 
   const { savedStageplotId, savedShareToken, savedAt, setSaved, clearSaved } = useStagePlot()
+
+  // Check if there are unsaved changes
+  const hasUnsavedChanges = lastSavedDataRef.current !== null && lastSavedDataRef.current !== JSON.stringify(data)
+  const isSaveDisabled = isSavingPlot || !hasUnsavedChanges
 
   const shareUrlValue = savedStageplotId && savedShareToken
     ? `${typeof window !== 'undefined' ? window.location.origin : ''}/stageplots/${savedStageplotId}?share=${savedShareToken}`
@@ -168,11 +173,10 @@ export const Header: React.FC = () => {
       if (json.success) {
         setSaved(json.stageplotId, json.shareToken)
         setShareStats(null) // reset stats so they're re-fetched on next share open
+        lastSavedDataRef.current = JSON.stringify(data)
         if (showSavePrompt) {
           setShowSavePrompt(false)
           setShareOpen(true)
-        } else {
-          handleExportPNG()
         }
       }
     } finally {
@@ -198,6 +202,13 @@ export const Header: React.FC = () => {
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
   }, [shareUrlValue])
+
+  // Initialize last saved data when a plot is loaded
+  useEffect(() => {
+    if (savedStageplotId) {
+      lastSavedDataRef.current = JSON.stringify(data)
+    }
+  }, [savedStageplotId])
 
   function relativeTime(iso: string | null): string {
     if (!iso) return ''
@@ -253,10 +264,15 @@ export const Header: React.FC = () => {
 
             {/* Saved/unsaved indicator + Save button */}
             <div className="flex items-center gap-2">
-              {savedStageplotId ? (
+              {savedStageplotId && !hasUnsavedChanges ? (
                 <span className="flex items-center gap-1 text-xs text-green-500">
                   <span className="w-1.5 h-1.5 rounded-full bg-green-500 shrink-0" />
                   Saved {savedAt ? relativeTime(savedAt) : ''}
+                </span>
+              ) : hasUnsavedChanges ? (
+                <span className="flex items-center gap-1 text-xs text-amber-500">
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
+                  Unsaved changes
                 </span>
               ) : (
                 <span className="flex items-center gap-1 text-xs text-amber-500">
@@ -272,12 +288,12 @@ export const Header: React.FC = () => {
                     handleSavePlot()
                   }
                 }}
-                disabled={isSavingPlot}
+                disabled={isSaveDisabled}
                 className={`text-xs px-3 py-1.5 rounded transition-colors ${
-                  savedStageplotId
-                    ? 'bg-slate-700 hover:bg-slate-600 text-slate-300'
-                    : 'bg-amber-600 hover:bg-amber-700 text-white'
-                } disabled:opacity-50 disabled:cursor-wait`}
+                  isSaveDisabled
+                    ? 'bg-slate-700 text-slate-500 cursor-not-allowed'
+                    : 'bg-indigo-600 hover:bg-indigo-700 text-white'
+                } disabled:opacity-50`}
               >
                 {isSavingPlot ? 'Saving...' : 'Save'}
               </button>
@@ -304,7 +320,7 @@ export const Header: React.FC = () => {
                 onClick={() => {
                   if (!user) {
                     setIsAuthModalOpen(true)
-                  } else if (!savedStageplotId) {
+                  } else if (!savedStageplotId || hasUnsavedChanges) {
                     setShowSavePrompt(true)
                   } else {
                     handleOpenShare()
