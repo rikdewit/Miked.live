@@ -8,7 +8,7 @@ import {
   Music2, X, Speaker, Mic2 as MicStand, Zap, Square, Tag
 } from 'lucide-react'
 import { useStagePlot } from '@/providers/StagePlotProvider'
-import { INSTRUMENTS } from '@/constants'
+import { INSTRUMENTS, INITIAL_RIDER_DATA } from '@/constants'
 import { generateMemberItems } from '@/utils/stageHelpers'
 import { BandMember, StageItem } from '@/types'
 import { StagePlot2DCanvas, MEMBER_COLORS } from '@/components/StagePlot2DCanvas'
@@ -225,14 +225,21 @@ function DashboardPageInner() {
     data, setData, updateStageItems,
     addMember, removeMember, updateMemberName,
     addMemberInstrument, updateMemberInstrument, removeMemberInstrument,
-    loadFromServer, isHydrated,
+    loadFromServer, clearSaved, isHydrated,
   } = useStagePlot()
 
-  // Load stageplot by ID from URL param
+  // Handle stageplot loading based on URL param
   useEffect(() => {
+    if (!isHydrated) return
     const id = searchParams.get('id')
-    if (!id || !isHydrated) return
-    loadFromServer(id)
+    if (id) {
+      // Load existing stageplot from server
+      loadFromServer(id)
+    } else {
+      // New stageplot - start fresh with initial data
+      setData(INITIAL_RIDER_DATA)
+      clearSaved()
+    }
   }, [isHydrated])
 
   // Drag-from-sidebar state
