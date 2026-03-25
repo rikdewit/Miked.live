@@ -19,7 +19,7 @@ export const Header: React.FC = () => {
 
   const handleStart = () => {
     posthog?.capture('start_now_clicked')
-    router.push('/band')
+    router.push('/dashboard')
   }
 
   return (
