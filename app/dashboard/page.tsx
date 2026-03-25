@@ -578,32 +578,7 @@ export default function DashboardPage() {
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <label className="text-xs text-slate-500 mb-1 block">Width (m)</label>
-                <input
-                  type="number"
-                  min={1}
-                  max={30}
-                  value={data.details.stageWidth ?? 8}
-                  onChange={e => setData(prev => ({ ...prev, details: { ...prev.details, stageWidth: Number(e.target.value) } }))}
-                  className="w-full bg-slate-900 border border-slate-700 rounded px-2.5 py-1.5 text-sm text-white focus:outline-none focus:border-indigo-500"
-                />
-              </div>
-              <div>
-                <label className="text-xs text-slate-500 mb-1 block">Depth (m)</label>
-                <input
-                  type="number"
-                  min={1}
-                  max={20}
-                  value={data.details.stageDepth ?? 5}
-                  onChange={e => setData(prev => ({ ...prev, details: { ...prev.details, stageDepth: Number(e.target.value) } }))}
-                  className="w-full bg-slate-900 border border-slate-700 rounded px-2.5 py-1.5 text-sm text-white focus:outline-none focus:border-indigo-500"
-                />
-              </div>
-            </div>
-
-            <div className="text-xs text-slate-600">
+<div className="text-xs text-slate-600">
               {data.stagePlot.length} item{data.stagePlot.length !== 1 ? 's' : ''} on stage · {data.members.length} member{data.members.length !== 1 ? 's' : ''}
             </div>
           </div>
