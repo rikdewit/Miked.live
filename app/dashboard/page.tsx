@@ -4,7 +4,7 @@ import React, { useState, useMemo, useRef, useCallback } from 'react'
 import {
   Plus, Trash2, GripVertical, ChevronDown, ChevronUp,
   Check, RefreshCw, AlertTriangle, Download, Share2, Copy, CheckCheck,
-  Music2, X
+  Music2, X, Speaker, Mic2 as MicStand, Zap, Square, Tag
 } from 'lucide-react'
 import { useRider } from '@/providers/RiderProvider'
 import { INSTRUMENTS } from '@/constants'
@@ -495,38 +495,39 @@ export default function DashboardPage() {
             </button>
           </div>
         )}
+
+        {/* Stage item buttons */}
+        <div className="border-t border-slate-800 p-3 space-y-1.5">
+          <span className="text-[10px] font-semibold text-slate-600 uppercase tracking-wider px-0.5">Add to stage</span>
+          <div className="grid grid-cols-2 gap-1.5">
+            {[
+              { label: 'Monitor', icon: <Speaker size={12} />, action: addMonitor },
+              { label: 'Mic Stand', icon: <MicStand size={12} />, action: addStand },
+              { label: 'Power', icon: <Zap size={12} />, action: addPower },
+              { label: 'Custom', icon: <Square size={12} />, action: addCustom },
+              { label: 'Label', icon: <Tag size={12} />, action: addLabel },
+            ].map(({ label, icon, action }) => (
+              <button
+                key={label}
+                onClick={action}
+                className="flex items-center gap-1.5 px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded text-xs border border-slate-700 transition-colors"
+              >
+                {icon} {label}
+              </button>
+            ))}
+          </div>
+          <button
+            onClick={() => data.stagePlot.length > 0 && setShowClearConfirm(true)}
+            disabled={data.stagePlot.length === 0}
+            className="w-full flex items-center justify-center gap-1.5 px-2.5 py-1.5 text-xs border rounded transition-colors disabled:opacity-30 disabled:cursor-not-allowed bg-red-950/40 hover:bg-red-900/40 text-red-300 border-red-900/50"
+          >
+            <Trash2 size={11} /> Clear stage
+          </button>
+        </div>
       </aside>
 
       {/* ── CENTER: Stage Canvas ─────────────────────────────────────────── */}
       <main className="flex-1 flex flex-col min-w-0 bg-slate-900 overflow-hidden">
-
-        {/* Canvas toolbar */}
-        <div className="flex items-center gap-1.5 px-4 py-2.5 border-b border-slate-800 bg-slate-950 flex-wrap">
-          <span className="text-xs font-medium text-slate-500 mr-1">Add:</span>
-          {[
-            { label: '+ Monitor', action: addMonitor },
-            { label: '+ Stand', action: addStand },
-            { label: '+ Power', action: addPower },
-            { label: '+ Custom', action: addCustom },
-            { label: '+ Label', action: addLabel },
-          ].map(({ label, action }) => (
-            <button
-              key={label}
-              onClick={action}
-              className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded text-xs border border-slate-700 transition-colors"
-            >
-              {label}
-            </button>
-          ))}
-          <div className="flex-1" />
-          <button
-            onClick={() => data.stagePlot.length > 0 && setShowClearConfirm(true)}
-            disabled={data.stagePlot.length === 0}
-            className="flex items-center gap-1 px-2.5 py-1 text-xs border rounded transition-colors disabled:opacity-30 disabled:cursor-not-allowed bg-red-950/40 hover:bg-red-900/40 text-red-300 border-red-900/50"
-          >
-            <Trash2 size={11} /> Clear
-          </button>
-        </div>
 
         {/* Drop zone + canvas */}
         <div
