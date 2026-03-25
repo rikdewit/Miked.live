@@ -1,14 +1,20 @@
 'use client'
 
-import React from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import { Mic2 } from 'lucide-react'
 import { usePostHog } from 'posthog-js/react'
+import { useRider } from '@/providers/RiderProvider'
 
 export const Header: React.FC = () => {
   const pathname = usePathname()
   const router = useRouter()
   const posthog = usePostHog()
+  const { data, setData } = useRider()
+
+  const [editingTitle, setEditingTitle] = useState(false)
+  const [titleDraft, setTitleDraft] = useState('')
+  const titleInputRef = useRef<HTMLInputElement>(null)
 
   const routes = ['/', '/band', '/stage', '/details', '/rider-preview']
   const stepIndex = routes.indexOf(pathname)
@@ -23,11 +29,29 @@ export const Header: React.FC = () => {
     router.push('/dashboard')
   }
 
+  const handleTitleClick = () => {
+    setTitleDraft(data.details.bandName || '')
+    setEditingTitle(true)
+  }
+
+  const handleTitleSave = () => {
+    setData(prev => ({ ...prev, details: { ...prev.details, bandName: titleDraft } }))
+    setEditingTitle(false)
+  }
+
+  useEffect(() => {
+    if (editingTitle && titleInputRef.current) {
+      titleInputRef.current.focus()
+      titleInputRef.current.select()
+    }
+  }, [editingTitle])
+
   if (isDashboard) {
+    const displayName = data.details.bandName || 'Untitled Stage Plot'
     return (
       <nav className="no-print bg-slate-950 border-b border-slate-800/50 sticky top-0 z-50">
-        <div className="px-4 h-10 flex items-center">
-          <div className="flex items-center gap-2 cursor-pointer" onClick={handleLogoClick}>
+        <div className="px-4 h-10 flex items-center gap-3">
+          <div className="flex items-center gap-2 cursor-pointer shrink-0" onClick={handleLogoClick}>
             <div className="bg-indigo-600 p-1 rounded-md">
               <Mic2 className="w-3.5 h-3.5 text-white" />
             </div>
@@ -35,6 +59,28 @@ export const Header: React.FC = () => {
               Miked<span className="text-indigo-500">.live</span>
             </span>
           </div>
+          <span className="text-slate-700 select-none">|</span>
+          {editingTitle ? (
+            <input
+              ref={titleInputRef}
+              value={titleDraft}
+              onChange={e => setTitleDraft(e.target.value)}
+              onBlur={handleTitleSave}
+              onKeyDown={e => {
+                if (e.key === 'Enter') handleTitleSave()
+                if (e.key === 'Escape') setEditingTitle(false)
+              }}
+              className="bg-transparent text-white text-sm font-medium focus:outline-none border-b border-indigo-500 px-0.5 w-48 min-w-0"
+              placeholder="Untitled Stage Plot"
+            />
+          ) : (
+            <button
+              onClick={handleTitleClick}
+              className="text-sm font-medium text-slate-300 hover:text-white hover:bg-slate-800/60 px-1.5 py-0.5 rounded transition-colors truncate max-w-xs"
+            >
+              {displayName}
+            </button>
+          )}
         </div>
       </nav>
     )
