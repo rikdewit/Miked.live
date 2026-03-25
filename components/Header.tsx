@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect, useCallback } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
-import { Mic2, Download, Share2, Copy, CheckCheck, X, LogOut, UserCircle, LayoutGrid } from 'lucide-react'
+import { Mic2, Download, Share2, Copy, CheckCheck, X, LogOut, UserCircle, Home } from 'lucide-react'
 import { usePostHog } from 'posthog-js/react'
 import { useStagePlot } from '@/providers/StagePlotProvider'
 import { supabase } from '@/utils/supabase'
@@ -228,16 +228,22 @@ export const Header: React.FC = () => {
         <nav className="no-print bg-slate-950 border-b border-slate-800/50 sticky top-0 z-50">
           <div className="px-4 h-16 flex items-center gap-3">
             {/* Logo */}
-            <div className="flex items-center gap-2 cursor-pointer shrink-0" onClick={handleLogoClick}>
-              <div className="bg-indigo-600 p-1.5 rounded-lg">
+            <div className="flex items-center gap-2 shrink-0">
+              <div className="bg-indigo-600 p-1.5 rounded-lg cursor-pointer" onClick={handleLogoClick} title="Go to home">
                 <Mic2 className="w-5 h-5 text-white" />
               </div>
-              <span className="text-lg font-bold tracking-tight">
-                Miked<span className="text-indigo-500">.live</span>
-              </span>
+              {user && (
+                <button
+                  onClick={() => router.push('/dashboard')}
+                  className="p-1.5 hover:bg-slate-800 rounded-lg transition-colors"
+                  title="Go to dashboard"
+                >
+                  <Home className="w-5 h-5 text-slate-400 hover:text-slate-200" />
+                </button>
+              )}
             </div>
 
-            <span className="text-slate-700 select-none">|</span>
+            {user && <span className="text-slate-700 select-none">|</span>}
 
             {/* Editable title */}
             {editingTitle ? (
@@ -390,16 +396,6 @@ export const Header: React.FC = () => {
                       <p className="text-xs text-slate-500">Signed in as</p>
                       <p className="text-xs text-slate-300 font-medium truncate">{user.email}</p>
                     </div>
-                    <button
-                      onClick={() => {
-                        router.push('/dashboard')
-                        setUserMenuOpen(false)
-                      }}
-                      className="w-full text-left px-3 py-2 text-xs text-slate-300 hover:text-white hover:bg-slate-800 transition-colors flex items-center gap-2 border-b border-slate-700"
-                    >
-                      <LayoutGrid size={13} />
-                      My Stage Plots
-                    </button>
                     <button
                       onClick={async () => {
                         setSigningOut(true)
