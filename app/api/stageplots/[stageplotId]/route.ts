@@ -38,6 +38,44 @@ export async function GET(
       }
     }
 
+    // 1b. Try owner access via Authorization Bearer token
+    const authHeader = request.headers.get('Authorization')
+    const bearerToken = authHeader?.replace('Bearer ', '')
+    if (bearerToken) {
+      const { createClient } = await import('@supabase/supabase-js')
+      const supabaseClient = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+        {
+          global: {
+            headers: {
+              Authorization: `Bearer ${bearerToken}`,
+            },
+          },
+        }
+      )
+      const { data: { user } } = await supabaseClient.auth.getUser()
+      if (user) {
+        const { data: plot } = await supabase
+          .from('stage_plots')
+          .select('*')
+          .eq('id', stageplotId)
+          .eq('user_id', user.id)
+          .single()
+
+        if (plot) {
+          return NextResponse.json({
+            plotData: plot.plot_data,
+            stageplotId: plot.id,
+            shareToken: plot.share_token,
+            accessLevel: 'owner',
+            view_count: plot.view_count,
+            created_at: plot.created_at,
+          })
+        }
+      }
+    }
+
     // 2. Try guest access via share token
     if (shareToken) {
       const { data: plot, error: plotError } = await supabase

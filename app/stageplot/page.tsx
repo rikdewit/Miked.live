@@ -1,6 +1,7 @@
 'use client'
 
-import React, { useState, useMemo, useRef, useCallback } from 'react'
+import React, { useState, useMemo, useRef, useCallback, useEffect, Suspense } from 'react'
+import { useSearchParams } from 'next/navigation'
 import {
   Plus, Trash2, GripVertical, ChevronDown, ChevronUp,
   Check, RefreshCw, AlertTriangle,
@@ -218,12 +219,21 @@ const MemberCard: React.FC<MemberCardProps> = ({
 
 // ─── Main Dashboard ───────────────────────────────────────────────────────────
 
-export default function DashboardPage() {
+function DashboardPageInner() {
+  const searchParams = useSearchParams()
   const {
     data, setData, updateStageItems,
     addMember, removeMember, updateMemberName,
     addMemberInstrument, updateMemberInstrument, removeMemberInstrument,
+    loadFromServer, isHydrated,
   } = useStagePlot()
+
+  // Load stageplot by ID from URL param
+  useEffect(() => {
+    const id = searchParams.get('id')
+    if (!id || !isHydrated) return
+    loadFromServer(id)
+  }, [isHydrated])
 
   // Drag-from-sidebar state
   const [draggingMemberId, setDraggingMemberId] = useState<string | null>(null)
@@ -518,5 +528,13 @@ export default function DashboardPage() {
         </div>
       )}
     </div>
+  )
+}
+
+export default function Page() {
+  return (
+    <Suspense fallback={null}>
+      <DashboardPageInner />
+    </Suspense>
   )
 }

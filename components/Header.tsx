@@ -2,16 +2,22 @@
 
 import React, { useState, useRef, useEffect, useCallback } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
-import { Mic2, Download, Share2, Copy, CheckCheck, X } from 'lucide-react'
+import { Mic2, Download, Share2, Copy, CheckCheck, X, LogOut, UserCircle, LayoutGrid } from 'lucide-react'
 import { usePostHog } from 'posthog-js/react'
 import { useStagePlot } from '@/providers/StagePlotProvider'
-import { DownloadModal } from '@/components/DownloadModal'
+import { supabase } from '@/utils/supabase'
+import { AuthModal } from '@/components/AuthModal'
+import type { User } from '@supabase/supabase-js'
 
 export const Header: React.FC = () => {
   const pathname = usePathname()
   const router = useRouter()
   const posthog = usePostHog()
   const { data, setData } = useStagePlot()
+
+  // Auth state
+  const [user, setUser] = useState<User | null>(null)
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false)
 
   // Title editing
   const [editingTitle, setEditingTitle] = useState(false)
@@ -21,7 +27,29 @@ export const Header: React.FC = () => {
   // Share popover
   const [shareOpen, setShareOpen] = useState(false)
   const [copied, setCopied] = useState(false)
+  const [signingOut, setSigningOut] = useState(false)
+  const [showSavePrompt, setShowSavePrompt] = useState(false)
   const shareRef = useRef<HTMLDivElement>(null)
+
+  // User menu
+  const [userMenuOpen, setUserMenuOpen] = useState(false)
+  const userMenuRef = useRef<HTMLDivElement>(null)
+
+  // Check auth on mount and subscribe to changes
+  useEffect(() => {
+    const checkAuth = async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      setUser(user)
+    }
+
+    checkAuth()
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null)
+    })
+
+    return () => subscription?.unsubscribe()
+  }, [])
 
   const routes = ['/', '/band', '/stage', '/details', '/rider-preview']
   const stepIndex = routes.indexOf(pathname)
@@ -33,7 +61,7 @@ export const Header: React.FC = () => {
 
   const handleStart = () => {
     posthog?.capture('start_now_clicked')
-    router.push('/stageplot')
+    router.push(user ? '/dashboard' : '/stageplot')
   }
 
   // Title
@@ -64,6 +92,18 @@ export const Header: React.FC = () => {
     return () => document.removeEventListener('mousedown', handler)
   }, [shareOpen])
 
+  // Close user menu on outside click
+  useEffect(() => {
+    if (!userMenuOpen) return
+    const handler = (e: MouseEvent) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(e.target as Node)) {
+        setUserMenuOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [userMenuOpen])
+
   // Export PNG via DOM query
   const handleExportPNG = useCallback(() => {
     const svg = document.querySelector<SVGSVGElement>('[data-export-svg]')
@@ -91,25 +131,35 @@ export const Header: React.FC = () => {
     img.src = url
   }, [data.details.bandName])
 
-  // ── Stageplot save handler (called by DownloadModal) ─────────────────────
-  const [isDownloadModalOpen, setIsDownloadModalOpen] = useState(false)
+  // ── Stageplot save handler ─────────────────────────────────────────────
   const [isSavingPlot, setIsSavingPlot] = useState(false)
   const [shareStats, setShareStats] = useState<{ view_count: number; created_at: string } | null>(null)
 
-  const { savedStageplotId, savedShareToken, savedAt, setSaved } = useStagePlot()
+  const { savedStageplotId, savedShareToken, savedAt, setSaved, clearSaved } = useStagePlot()
 
   const shareUrlValue = savedStageplotId && savedShareToken
     ? `${typeof window !== 'undefined' ? window.location.origin : ''}/stageplots/${savedStageplotId}?share=${savedShareToken}`
     : ''
 
-  const handleSavePlot = useCallback(async (email: string) => {
+  const handleSavePlot = useCallback(async () => {
+    if (!user) return
     setIsSavingPlot(true)
     try {
+      // Get the current session to get the access token
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+
+      if (sessionError || !session?.access_token) {
+        console.error('Failed to get session:', sessionError)
+        return
+      }
+
       const res = await fetch('/api/stageplots/save', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
         body: JSON.stringify({
-          email,
           plotData: data,
           stageplotId: savedStageplotId ?? undefined,
         }),
@@ -118,12 +168,17 @@ export const Header: React.FC = () => {
       if (json.success) {
         setSaved(json.stageplotId, json.shareToken)
         setShareStats(null) // reset stats so they're re-fetched on next share open
-        handleExportPNG()
+        if (showSavePrompt) {
+          setShowSavePrompt(false)
+          setShareOpen(true)
+        } else {
+          handleExportPNG()
+        }
       }
     } finally {
       setIsSavingPlot(false)
     }
-  }, [data, savedStageplotId, setSaved, handleExportPNG])
+  }, [data, savedStageplotId, setSaved, handleExportPNG, user, showSavePrompt])
 
   const handleOpenShare = useCallback(async () => {
     setShareOpen(o => !o)
@@ -160,13 +215,13 @@ export const Header: React.FC = () => {
     return (
       <>
         <nav className="no-print bg-slate-950 border-b border-slate-800/50 sticky top-0 z-50">
-          <div className="px-4 h-10 flex items-center gap-3">
+          <div className="px-4 h-16 flex items-center gap-3">
             {/* Logo */}
             <div className="flex items-center gap-2 cursor-pointer shrink-0" onClick={handleLogoClick}>
-              <div className="bg-indigo-600 p-1 rounded-md">
-                <Mic2 className="w-3.5 h-3.5 text-white" />
+              <div className="bg-indigo-600 p-1.5 rounded-lg">
+                <Mic2 className="w-5 h-5 text-white" />
               </div>
-              <span className="text-sm font-bold tracking-tight">
+              <span className="text-lg font-bold tracking-tight">
                 Miked<span className="text-indigo-500">.live</span>
               </span>
             </div>
@@ -184,50 +239,80 @@ export const Header: React.FC = () => {
                   if (e.key === 'Enter') handleTitleSave()
                   if (e.key === 'Escape') setEditingTitle(false)
                 }}
-                className="bg-transparent text-white text-sm font-medium focus:outline-none border-b border-indigo-500 px-0.5 w-48 min-w-0"
+                className="bg-transparent text-white text-base font-medium focus:outline-none border-b border-indigo-500 px-0.5 w-48 min-w-0"
                 placeholder="Untitled Stage Plot"
               />
             ) : (
               <button
                 onClick={handleTitleClick}
-                className="text-sm font-medium text-slate-300 hover:text-white hover:bg-slate-800/60 px-1.5 py-0.5 rounded transition-colors truncate max-w-xs"
+                className="text-base font-medium text-slate-300 hover:text-white hover:bg-slate-800/60 px-1.5 py-0.5 rounded transition-colors truncate max-w-xs"
               >
                 {displayName}
               </button>
             )}
 
-            {/* Saved indicator */}
-            {savedStageplotId && (
-              <span className="flex items-center gap-1 text-[10px] text-green-500">
-                <span className="w-1.5 h-1.5 rounded-full bg-green-500 shrink-0" />
-                Saved {savedAt ? relativeTime(savedAt) : ''}
-              </span>
-            )}
+            {/* Saved/unsaved indicator + Save button */}
+            <div className="flex items-center gap-2">
+              {savedStageplotId ? (
+                <span className="flex items-center gap-1 text-xs text-green-500">
+                  <span className="w-1.5 h-1.5 rounded-full bg-green-500 shrink-0" />
+                  Saved {savedAt ? relativeTime(savedAt) : ''}
+                </span>
+              ) : (
+                <span className="flex items-center gap-1 text-xs text-amber-500">
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
+                  Not saved
+                </span>
+              )}
+              <button
+                onClick={() => {
+                  if (!user) {
+                    setIsAuthModalOpen(true)
+                  } else {
+                    handleSavePlot()
+                  }
+                }}
+                disabled={isSavingPlot}
+                className={`text-xs px-3 py-1.5 rounded transition-colors ${
+                  savedStageplotId
+                    ? 'bg-slate-700 hover:bg-slate-600 text-slate-300'
+                    : 'bg-amber-600 hover:bg-amber-700 text-white'
+                } disabled:opacity-50 disabled:cursor-wait`}
+              >
+                {isSavingPlot ? 'Saving...' : 'Save'}
+              </button>
+            </div>
 
             <div className="flex-1" />
 
             {/* Stats */}
-            <span className="hidden sm:block text-xs text-slate-600 mr-1">
+            <span className="hidden sm:block text-sm text-slate-600 mr-1">
               {data.stagePlot.length} item{data.stagePlot.length !== 1 ? 's' : ''} · {data.members.length} member{data.members.length !== 1 ? 's' : ''}
             </span>
 
-            {/* Download & Save button */}
+            {/* Download button */}
             <button
-              onClick={() => setIsDownloadModalOpen(true)}
-              className="flex items-center gap-1.5 px-2.5 py-1 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 hover:text-white rounded text-xs transition-colors"
+              onClick={handleExportPNG}
+              className="flex items-center gap-1.5 px-3 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 hover:text-white rounded text-sm transition-colors"
             >
-              <Download size={12} /> Download & Save
+              <Download size={14} /> Download
             </button>
 
             {/* Share button + popover */}
             <div ref={shareRef} className="relative">
               <button
-                onClick={handleOpenShare}
-                disabled={!savedStageplotId}
-                title={!savedStageplotId ? 'Download & Save first' : undefined}
-                className="flex items-center gap-1.5 px-2.5 py-1 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded text-xs font-medium transition-colors"
+                onClick={() => {
+                  if (!user) {
+                    setIsAuthModalOpen(true)
+                  } else if (!savedStageplotId) {
+                    setShowSavePrompt(true)
+                  } else {
+                    handleOpenShare()
+                  }
+                }}
+                className="flex items-center gap-1.5 px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded text-sm font-medium transition-colors"
               >
-                <Share2 size={12} /> Share
+                <Share2 size={14} /> Share
               </button>
 
               {shareOpen && savedStageplotId && (
@@ -267,29 +352,100 @@ export const Header: React.FC = () => {
                       )}
                       {savedAt && <p>Saved {relativeTime(savedAt)}</p>}
                     </div>
-
-                    {/* Re-save with different email */}
-                    <button
-                      onClick={() => { setShareOpen(false); setIsDownloadModalOpen(true) }}
-                      className="text-xs text-slate-600 hover:text-slate-400 transition-colors"
-                    >
-                      Share with a different email →
-                    </button>
                   </div>
                 </div>
               )}
             </div>
+
+            {/* User menu */}
+            {user && (
+              <div ref={userMenuRef} className="relative">
+                <button
+                  onClick={() => setUserMenuOpen(!userMenuOpen)}
+                  className="flex items-center gap-2 px-2 py-1 hover:bg-slate-800 rounded transition-colors"
+                  title="User menu"
+                >
+                  <UserCircle size={20} className="text-slate-300" />
+                </button>
+
+                {userMenuOpen && (
+                  <div className="absolute right-0 top-full mt-2 w-48 bg-slate-900 border border-slate-700 rounded-lg shadow-2xl z-50">
+                    <div className="p-3 border-b border-slate-700">
+                      <p className="text-xs text-slate-500">Signed in as</p>
+                      <p className="text-xs text-slate-300 font-medium truncate">{user.email}</p>
+                    </div>
+                    <button
+                      onClick={() => {
+                        router.push('/dashboard')
+                        setUserMenuOpen(false)
+                      }}
+                      className="w-full text-left px-3 py-2 text-xs text-slate-300 hover:text-white hover:bg-slate-800 transition-colors flex items-center gap-2 border-b border-slate-700"
+                    >
+                      <LayoutGrid size={13} />
+                      My Stage Plots
+                    </button>
+                    <button
+                      onClick={async () => {
+                        setSigningOut(true)
+                        try {
+                          const { error } = await supabase.auth.signOut()
+                          if (error) throw error
+                          setUserMenuOpen(false)
+                        } catch (err) {
+                          console.error('Sign out failed:', err)
+                        } finally {
+                          setSigningOut(false)
+                        }
+                      }}
+                      disabled={signingOut}
+                      className="w-full text-left px-3 py-2 text-xs text-slate-300 hover:text-white hover:bg-slate-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                    >
+                      <LogOut size={13} />
+                      {signingOut ? 'Signing out...' : 'Sign out'}
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </nav>
 
-        <DownloadModal
-          isOpen={isDownloadModalOpen}
-          prefillEmail={data.details.email}
-          onClose={() => setIsDownloadModalOpen(false)}
-          onConfirm={handleSavePlot}
-          isGeneratingPdf={isSavingPlot}
-          lastSentEmail={null}
+        <AuthModal
+          isOpen={isAuthModalOpen}
+          onClose={() => setIsAuthModalOpen(false)}
+          onAuthSuccess={() => {
+            setIsAuthModalOpen(false)
+            handleSavePlot()
+          }}
         />
+
+        {/* Save prompt modal */}
+        {showSavePrompt && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+            <div className="bg-slate-800 border border-slate-600 rounded-xl p-6 max-w-sm w-full shadow-2xl">
+              <h3 className="text-base font-bold text-white mb-2">Save before sharing?</h3>
+              <p className="text-slate-300 text-sm mb-5">You need to save this stage plot before you can share it.</p>
+              <div className="flex justify-end gap-2">
+                <button
+                  onClick={() => setShowSavePrompt(false)}
+                  className="px-4 py-2 rounded text-slate-400 hover:text-white hover:bg-slate-700 text-sm transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => {
+                    setShowSavePrompt(false)
+                    handleSavePlot()
+                  }}
+                  disabled={isSavingPlot}
+                  className="px-4 py-2 rounded bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-700 disabled:cursor-wait text-white text-sm font-bold transition-colors"
+                >
+                  {isSavingPlot ? 'Saving...' : 'Save & Share'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </>
     )
   }
