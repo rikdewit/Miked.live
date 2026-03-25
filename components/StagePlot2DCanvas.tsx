@@ -344,9 +344,6 @@ export const StagePlot2DCanvas: React.FC<StagePlot2DCanvasProps> = ({
         <text x={SVG_W / 2} y={SVG_H - 16} textAnchor="middle" fontSize={10} fill="#334155" fontFamily="system-ui,sans-serif" letterSpacing={5} fontWeight={600}>
           AUDIENCE
         </text>
-        <text x={SVG_W / 2} y={13} textAnchor="middle" fontSize={8} fill="#293548" fontFamily="system-ui" letterSpacing={3}>
-          BACK OF STAGE
-        </text>
 
         {/* Ghost items */}
         {ghostItems.map(item => (
