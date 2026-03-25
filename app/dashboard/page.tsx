@@ -3,13 +3,12 @@
 import React, { useState, useMemo, useRef, useCallback } from 'react'
 import {
   Plus, Trash2, GripVertical, ChevronDown, ChevronUp,
-  Check, RefreshCw, AlertTriangle, Download, Share2, Copy, CheckCheck,
+  Check, RefreshCw, AlertTriangle,
   Music2, X, Speaker, Mic2 as MicStand, Zap, Square, Tag
 } from 'lucide-react'
 import { useRider } from '@/providers/RiderProvider'
 import { INSTRUMENTS } from '@/constants'
 import { generateMemberItems } from '@/utils/stageHelpers'
-import { STAGE_WIDTH, STAGE_DEPTH, getItemConfig } from '@/utils/stageConfig'
 import { BandMember, StageItem } from '@/types'
 import { StagePlot2DCanvas, MEMBER_COLORS } from '@/components/StagePlot2DCanvas'
 
@@ -236,15 +235,6 @@ export default function DashboardPage() {
   const [expandedMemberId, setExpandedMemberId] = useState<string | null>(null)
   const [showClearConfirm, setShowClearConfirm] = useState(false)
 
-  // Share state
-  const [shareEmail, setShareEmail] = useState('')
-  const [isSaving, setIsSaving] = useState(false)
-  const [shareResult, setShareResult] = useState<{ riderId: string; shareToken: string } | null>(null)
-  const [copied, setCopied] = useState(false)
-
-  // Export ref
-  const exportRef = useRef<SVGSVGElement | null>(null)
-
   // ── Rotation ──────────────────────────────────────────────────────────────
   const handleRotateItem = useCallback((itemId: string, direction: 'left' | 'right') => {
     const item = data.stagePlot.find(i => i.id === itemId)
@@ -362,60 +352,6 @@ export default function DashboardPage() {
   const addPower = () => updateStageItems([...data.stagePlot, { id: `pwr-${Date.now()}`, type: 'power', x: 50, y: 50, label: 'Power', quantity: 1 }])
   const addCustom = () => updateStageItems([...data.stagePlot, { id: `custom-${Date.now()}`, type: 'custom', x: 50, y: 50, label: 'Custom', customWidth: 1.0, customDepth: 1.0 }])
   const addLabel = () => updateStageItems([...data.stagePlot, { id: `lbl-${Date.now()}`, type: 'custom', x: 50, y: 50, label: 'Label', customWidth: 0, customDepth: 0 }])
-
-  // ── Export PNG ────────────────────────────────────────────────────────────
-  const handleExportPNG = useCallback(async () => {
-    const svg = exportRef.current
-    if (!svg) return
-    const xml = new XMLSerializer().serializeToString(svg)
-    const blob = new Blob([xml], { type: 'image/svg+xml;charset=utf-8' })
-    const url = URL.createObjectURL(blob)
-    const img = new Image()
-    img.onload = () => {
-      const c = document.createElement('canvas')
-      c.width = 1600
-      c.height = 1000
-      const ctx = c.getContext('2d')
-      if (!ctx) return
-      ctx.drawImage(img, 0, 0, 1600, 1000)
-      URL.revokeObjectURL(url)
-      c.toBlob(b => {
-        if (!b) return
-        const a = document.createElement('a')
-        a.href = URL.createObjectURL(b)
-        a.download = `${data.details.bandName || 'stage-plot'}.png`
-        a.click()
-      })
-    }
-    img.src = url
-  }, [data.details.bandName])
-
-  // ── Share ─────────────────────────────────────────────────────────────────
-  const handleShare = useCallback(async () => {
-    if (!shareEmail.trim()) return
-    setIsSaving(true)
-    try {
-      const res = await fetch('/api/riders/save', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: shareEmail, riderData: data }),
-      })
-      const json = await res.json()
-      if (json.success) setShareResult({ riderId: json.riderId, shareToken: json.shareToken })
-    } finally {
-      setIsSaving(false)
-    }
-  }, [shareEmail, data])
-
-  const shareUrl = shareResult
-    ? `${typeof window !== 'undefined' ? window.location.origin : ''}/riders/${shareResult.riderId}?token=${shareResult.shareToken}`
-    : ''
-
-  const handleCopy = useCallback(() => {
-    navigator.clipboard.writeText(shareUrl)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
-  }, [shareUrl])
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
@@ -543,7 +479,6 @@ export default function DashboardPage() {
             ghostItems={ghostItems}
             members={data.members}
             onRotateItem={handleRotateItem}
-            exportRef={exportRef}
           />
 
           {/* Empty state */}
@@ -558,92 +493,6 @@ export default function DashboardPage() {
           )}
         </div>
       </main>
-
-      {/* ── RIGHT PANEL: Settings ────────────────────────────────────────── */}
-      <aside className="w-[268px] shrink-0 flex flex-col bg-slate-950 border-l border-slate-800 overflow-hidden">
-
-        <div className="flex-1 overflow-y-auto">
-          {/* Export */}
-          <section className="border-b border-slate-800">
-            <div className="px-4 py-3">
-              <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Export</span>
-            </div>
-            <div className="px-4 pb-4">
-              <button
-                onClick={handleExportPNG}
-                className="w-full flex items-center justify-center gap-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white rounded px-3 py-2 text-sm font-medium transition-colors"
-              >
-                <Download size={14} /> Download PNG
-              </button>
-              <p className="text-xs text-slate-600 mt-1.5 text-center">High-resolution stage plot image</p>
-            </div>
-          </section>
-
-          {/* Share */}
-          <section>
-            <div className="px-4 py-3">
-              <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Share</span>
-            </div>
-            <div className="px-4 pb-4 space-y-2.5">
-              {!shareResult ? (
-                <>
-                  <div>
-                    <label className="text-xs text-slate-500 mb-1 block">Your email</label>
-                    <input
-                      type="email"
-                      value={shareEmail}
-                      onChange={e => setShareEmail(e.target.value)}
-                      placeholder="you@example.com"
-                      className="w-full bg-slate-900 border border-slate-700 rounded px-2.5 py-1.5 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500"
-                    />
-                  </div>
-                  <button
-                    onClick={handleShare}
-                    disabled={isSaving || !shareEmail.trim()}
-                    className="w-full flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded px-3 py-2 text-sm font-medium transition-colors"
-                  >
-                    <Share2 size={14} />
-                    {isSaving ? 'Saving…' : 'Save & Get Link'}
-                  </button>
-                  <p className="text-xs text-slate-600">We&apos;ll email you a magic link to access your stage plot anytime.</p>
-                </>
-              ) : (
-                <div className="space-y-2">
-                  <p className="text-xs text-green-400 font-medium flex items-center gap-1">
-                    <Check size={11} /> Saved! Magic link sent to {shareEmail}
-                  </p>
-                  <div className="flex gap-1.5">
-                    <input
-                      readOnly
-                      value={shareUrl}
-                      className="flex-1 min-w-0 bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-xs text-slate-400 focus:outline-none"
-                    />
-                    <button
-                      onClick={handleCopy}
-                      className="flex items-center gap-1 px-2.5 py-1.5 bg-slate-700 hover:bg-slate-600 text-white rounded text-xs transition-colors shrink-0"
-                    >
-                      {copied ? <CheckCheck size={12} className="text-green-400" /> : <Copy size={12} />}
-                    </button>
-                  </div>
-                  <button
-                    onClick={() => { setShareResult(null); setShareEmail('') }}
-                    className="text-xs text-slate-600 hover:text-slate-400 transition-colors"
-                  >
-                    Share with a different email
-                  </button>
-                </div>
-              )}
-            </div>
-          </section>
-        </div>
-
-        {/* Stats pinned to bottom */}
-        <div className="border-t border-slate-800 px-4 py-2.5">
-          <p className="text-xs text-slate-600">
-            {data.stagePlot.length} item{data.stagePlot.length !== 1 ? 's' : ''} on stage · {data.members.length} member{data.members.length !== 1 ? 's' : ''}
-          </p>
-        </div>
-      </aside>
 
       {/* Clear confirm modal */}
       {showClearConfirm && (

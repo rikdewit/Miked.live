@@ -320,6 +320,7 @@ export const StagePlot2DCanvas: React.FC<StagePlot2DCanvasProps> = ({
         ref={setSvgRef}
         viewBox={`0 0 ${SVG_W} ${SVG_H}`}
         className="w-full h-full"
+        data-export-svg="true"
         onPointerMove={handleSvgPointerMove}
         onPointerUp={handleSvgPointerUp}
         onClick={handleSvgClick}
