@@ -4,10 +4,6 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 }
 
-export default function RiderPreviewLayout({
-  children,
-}: {
-  children: React.ReactNode
-}) {
+export default function StagePlotLayout({ children }: { children: React.ReactNode }) {
   return children
 }

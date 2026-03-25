@@ -3,14 +3,14 @@
 import { useEffect } from 'react'
 import dynamic from 'next/dynamic'
 import { usePostHog } from 'posthog-js/react'
-import { useRider } from '@/providers/RiderProvider'
+import { useStagePlot } from '@/providers/StagePlotProvider'
 import { FooterNav } from '@/components/FooterNav'
 
 const StepStagePlot = dynamic(() => import('@/components/StepStagePlot').then(m => ({ default: m.StepStagePlot })), { ssr: false })
 
 export default function StagePage() {
   const posthog = usePostHog()
-  const { data, setData, updateStageItems } = useRider()
+  const { data, setData, updateStageItems } = useStagePlot()
 
   useEffect(() => {
     posthog?.capture('step_viewed', { step: 'stage' })

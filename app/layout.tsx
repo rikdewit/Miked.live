@@ -3,7 +3,7 @@ import { Inter } from 'next/font/google'
 import './globals.css'
 import { PHProvider } from './providers/PostHogProvider'
 import { PageViewTracker } from './providers/PageViewTracker'
-import { RiderProvider } from '@/providers/RiderProvider'
+import { StagePlotProvider } from '@/providers/StagePlotProvider'
 import { Header } from '@/components/Header'
 
 const inter = Inter({
@@ -73,7 +73,7 @@ export default function RootLayout({
         />
       </head>
       <body className="bg-slate-900 text-slate-100">
-        <RiderProvider>
+        <StagePlotProvider>
           <PHProvider>
             <PageViewTracker />
             <div className="h-dvh overflow-hidden flex flex-col">
@@ -83,7 +83,7 @@ export default function RootLayout({
               </main>
             </div>
           </PHProvider>
-        </RiderProvider>
+        </StagePlotProvider>
       </body>
     </html>
   )

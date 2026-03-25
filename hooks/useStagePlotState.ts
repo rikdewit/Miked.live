@@ -4,8 +4,30 @@ import { RiderData, BandMember, StageItem, InstrumentType, InputConfig } from '.
 import { INITIAL_RIDER_DATA, INSTRUMENTS } from '../constants';
 
 const STORAGE_KEY = 'miked_rider_data';
+const SAVE_STATE_KEY = 'miked_sp_save';
 
-export const useRiderState = () => {
+interface SaveState {
+  savedStageplotId: string | null
+  savedShareToken: string | null
+  savedAt: string | null
+}
+
+const INITIAL_SAVE_STATE: SaveState = {
+  savedStageplotId: null,
+  savedShareToken: null,
+  savedAt: null,
+}
+
+function loadSaveState(): SaveState {
+  try {
+    const raw = localStorage.getItem(SAVE_STATE_KEY)
+    return raw ? JSON.parse(raw) : INITIAL_SAVE_STATE
+  } catch {
+    return INITIAL_SAVE_STATE
+  }
+}
+
+export const useStagePlotState = () => {
   const [data, setData] = useState<RiderData>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
@@ -15,6 +37,8 @@ export const useRiderState = () => {
     }
   });
 
+  const [saveState, setSaveStateInternal] = useState<SaveState>(loadSaveState)
+
   // Save to localStorage whenever data changes
   useEffect(() => {
     try {
@@ -23,6 +47,23 @@ export const useRiderState = () => {
       console.error('Failed to save to localStorage:', err);
     }
   }, [data]);
+
+  const setSaved = useCallback((stageplotId: string, shareToken: string) => {
+    const next: SaveState = { savedStageplotId: stageplotId, savedShareToken: shareToken, savedAt: new Date().toISOString() }
+    setSaveStateInternal(next)
+    try {
+      localStorage.setItem(SAVE_STATE_KEY, JSON.stringify(next))
+    } catch (err) {
+      console.error('Failed to persist save state:', err)
+    }
+  }, [])
+
+  const clearSaved = useCallback(() => {
+    setSaveStateInternal(INITIAL_SAVE_STATE)
+    try {
+      localStorage.removeItem(SAVE_STATE_KEY)
+    } catch { /* ignore */ }
+  }, [])
 
   const addMember = useCallback(() => {
     const newMember: BandMember = {
@@ -100,7 +141,7 @@ export const useRiderState = () => {
       let updatedStagePlot = prev.stagePlot.filter(item => {
         // If it's not this member, keep it
         if (item.memberId !== memberId) return true;
-        
+
         // If it's the Person, keep it
         if (item.type === 'person') return true;
 
@@ -199,6 +240,11 @@ export const useRiderState = () => {
     removeMemberInstrument,
     removeMember,
     updateStageItems,
-    updateInstrumentInputs
+    updateInstrumentInputs,
+    savedStageplotId: saveState.savedStageplotId,
+    savedShareToken: saveState.savedShareToken,
+    savedAt: saveState.savedAt,
+    setSaved,
+    clearSaved,
   };
 };

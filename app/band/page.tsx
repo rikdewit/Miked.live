@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { usePostHog } from 'posthog-js/react'
 import { StepInstruments } from '@/components/StepInstruments'
-import { useRider } from '@/providers/RiderProvider'
+import { useStagePlot } from '@/providers/StagePlotProvider'
 import { FooterNav } from '@/components/FooterNav'
 
 export default function BandPage() {
@@ -19,7 +19,7 @@ export default function BandPage() {
     removeMemberInstrument,
     removeMember,
     updateInstrumentInputs
-  } = useRider()
+  } = useStagePlot()
 
   useEffect(() => {
     setIsHydrated(true)
