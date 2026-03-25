@@ -82,7 +82,7 @@ export const DownloadModal: React.FC<DownloadModalProps> = ({
         {/* Header */}
         <div className="flex justify-between items-center p-6 border-b border-gray-200">
           <h2 className="text-xl font-semibold text-gray-900">
-            {isSuccess ? 'Rider saved!' : 'Save your rider & get a shareable link'}
+            {isSuccess ? 'Stage plot saved!' : 'Save your stage plot & get a shareable link'}
           </h2>
           <button
             onClick={handleClose}
@@ -120,7 +120,7 @@ export const DownloadModal: React.FC<DownloadModalProps> = ({
                 <ul className="space-y-2 text-sm text-gray-700">
                   <li className="flex items-start">
                     <span className="text-indigo-600 mr-2">✓</span>
-                    <span>Access your rider anytime with the link</span>
+                    <span>Access your stage plot anytime with the link</span>
                   </li>
                   <li className="flex items-start">
                     <span className="text-indigo-600 mr-2">✓</span>
@@ -203,7 +203,7 @@ export const DownloadModal: React.FC<DownloadModalProps> = ({
                 <ul className="space-y-2 text-sm text-gray-700">
                   <li className="flex items-start">
                     <span className="text-indigo-600 mr-2">✓</span>
-                    <span>Access this rider anytime</span>
+                    <span>Access this stage plot anytime</span>
                   </li>
                   <li className="flex items-start">
                     <span className="text-indigo-600 mr-2">✓</span>
@@ -240,7 +240,7 @@ export const DownloadModal: React.FC<DownloadModalProps> = ({
                 }}
                 className="flex-1 px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition flex items-center justify-center gap-2"
               >
-                View Your Riders
+                View Your Stage Plots
                 <ArrowRight size={16} />
               </Link>
             </>

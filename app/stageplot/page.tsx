@@ -6,7 +6,7 @@ import {
   Check, RefreshCw, AlertTriangle,
   Music2, X, Speaker, Mic2 as MicStand, Zap, Square, Tag
 } from 'lucide-react'
-import { useRider } from '@/providers/RiderProvider'
+import { useStagePlot } from '@/providers/StagePlotProvider'
 import { INSTRUMENTS } from '@/constants'
 import { generateMemberItems } from '@/utils/stageHelpers'
 import { BandMember, StageItem } from '@/types'
@@ -223,7 +223,7 @@ export default function DashboardPage() {
     data, setData, updateStageItems,
     addMember, removeMember, updateMemberName,
     addMemberInstrument, updateMemberInstrument, removeMemberInstrument,
-  } = useRider()
+  } = useStagePlot()
 
   // Drag-from-sidebar state
   const [draggingMemberId, setDraggingMemberId] = useState<string | null>(null)

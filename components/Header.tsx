@@ -2,15 +2,16 @@
 
 import React, { useState, useRef, useEffect, useCallback } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
-import { Mic2, Download, Share2, Copy, CheckCheck, Check, X } from 'lucide-react'
+import { Mic2, Download, Share2, Copy, CheckCheck, X } from 'lucide-react'
 import { usePostHog } from 'posthog-js/react'
-import { useRider } from '@/providers/RiderProvider'
+import { useStagePlot } from '@/providers/StagePlotProvider'
+import { DownloadModal } from '@/components/DownloadModal'
 
 export const Header: React.FC = () => {
   const pathname = usePathname()
   const router = useRouter()
   const posthog = usePostHog()
-  const { data, setData } = useRider()
+  const { data, setData } = useStagePlot()
 
   // Title editing
   const [editingTitle, setEditingTitle] = useState(false)
@@ -19,23 +20,20 @@ export const Header: React.FC = () => {
 
   // Share popover
   const [shareOpen, setShareOpen] = useState(false)
-  const [shareEmail, setShareEmail] = useState('')
-  const [isSaving, setIsSaving] = useState(false)
-  const [shareResult, setShareResult] = useState<{ riderId: string; shareToken: string } | null>(null)
   const [copied, setCopied] = useState(false)
   const shareRef = useRef<HTMLDivElement>(null)
 
   const routes = ['/', '/band', '/stage', '/details', '/rider-preview']
   const stepIndex = routes.indexOf(pathname)
-  const isFlowPage = stepIndex !== -1 && !pathname.startsWith('/riders/')
-  const isLanding = stepIndex === 0 || pathname.startsWith('/riders/')
-  const isDashboard = pathname === '/dashboard'
+  const isFlowPage = stepIndex !== -1
+  const isLanding = stepIndex === 0
+  const isStageplot = pathname === '/stageplot'
 
   const handleLogoClick = () => router.push('/')
 
   const handleStart = () => {
     posthog?.capture('start_now_clicked')
-    router.push('/dashboard')
+    router.push('/stageplot')
   }
 
   // Title
@@ -93,157 +91,206 @@ export const Header: React.FC = () => {
     img.src = url
   }, [data.details.bandName])
 
-  // Share
-  const shareUrl = shareResult
-    ? `${typeof window !== 'undefined' ? window.location.origin : ''}/riders/${shareResult.riderId}?token=${shareResult.shareToken}`
+  // ── Stageplot save handler (called by DownloadModal) ─────────────────────
+  const [isDownloadModalOpen, setIsDownloadModalOpen] = useState(false)
+  const [isSavingPlot, setIsSavingPlot] = useState(false)
+  const [shareStats, setShareStats] = useState<{ view_count: number; created_at: string } | null>(null)
+
+  const { savedStageplotId, savedShareToken, savedAt, setSaved } = useStagePlot()
+
+  const shareUrlValue = savedStageplotId && savedShareToken
+    ? `${typeof window !== 'undefined' ? window.location.origin : ''}/stageplots/${savedStageplotId}?share=${savedShareToken}`
     : ''
 
-  const handleShare = useCallback(async () => {
-    if (!shareEmail.trim()) return
-    setIsSaving(true)
+  const handleSavePlot = useCallback(async (email: string) => {
+    setIsSavingPlot(true)
     try {
-      const res = await fetch('/api/riders/save', {
+      const res = await fetch('/api/stageplots/save', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: shareEmail, riderData: data }),
+        body: JSON.stringify({
+          email,
+          plotData: data,
+          stageplotId: savedStageplotId ?? undefined,
+        }),
       })
       const json = await res.json()
-      if (json.success) setShareResult({ riderId: json.riderId, shareToken: json.shareToken })
+      if (json.success) {
+        setSaved(json.stageplotId, json.shareToken)
+        setShareStats(null) // reset stats so they're re-fetched on next share open
+        handleExportPNG()
+      }
     } finally {
-      setIsSaving(false)
+      setIsSavingPlot(false)
     }
-  }, [shareEmail, data])
+  }, [data, savedStageplotId, setSaved, handleExportPNG])
 
-  const handleCopy = useCallback(() => {
-    navigator.clipboard.writeText(shareUrl)
+  const handleOpenShare = useCallback(async () => {
+    setShareOpen(o => !o)
+    if (!savedStageplotId || !savedShareToken || shareStats) return
+    try {
+      const res = await fetch(`/api/stageplots/${savedStageplotId}?share=${savedShareToken}`)
+      if (res.ok) {
+        const json = await res.json()
+        setShareStats({ view_count: json.view_count ?? 0, created_at: json.created_at })
+      }
+    } catch { /* ignore */ }
+  }, [savedStageplotId, savedShareToken, shareStats])
+
+  const handleCopyShareUrl = useCallback(() => {
+    if (!shareUrlValue) return
+    navigator.clipboard.writeText(shareUrlValue)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
-  }, [shareUrl])
+  }, [shareUrlValue])
 
-  if (isDashboard) {
+  function relativeTime(iso: string | null): string {
+    if (!iso) return ''
+    const diff = Date.now() - new Date(iso).getTime()
+    const mins = Math.floor(diff / 60000)
+    if (mins < 1) return 'just now'
+    if (mins < 60) return `${mins}m ago`
+    const hrs = Math.floor(mins / 60)
+    if (hrs < 24) return `${hrs}h ago`
+    return `${Math.floor(hrs / 24)}d ago`
+  }
+
+  if (isStageplot) {
     const displayName = data.details.bandName || 'Untitled Stage Plot'
     return (
-      <nav className="no-print bg-slate-950 border-b border-slate-800/50 sticky top-0 z-50">
-        <div className="px-4 h-10 flex items-center gap-3">
-          {/* Logo */}
-          <div className="flex items-center gap-2 cursor-pointer shrink-0" onClick={handleLogoClick}>
-            <div className="bg-indigo-600 p-1 rounded-md">
-              <Mic2 className="w-3.5 h-3.5 text-white" />
+      <>
+        <nav className="no-print bg-slate-950 border-b border-slate-800/50 sticky top-0 z-50">
+          <div className="px-4 h-10 flex items-center gap-3">
+            {/* Logo */}
+            <div className="flex items-center gap-2 cursor-pointer shrink-0" onClick={handleLogoClick}>
+              <div className="bg-indigo-600 p-1 rounded-md">
+                <Mic2 className="w-3.5 h-3.5 text-white" />
+              </div>
+              <span className="text-sm font-bold tracking-tight">
+                Miked<span className="text-indigo-500">.live</span>
+              </span>
             </div>
-            <span className="text-sm font-bold tracking-tight">
-              Miked<span className="text-indigo-500">.live</span>
+
+            <span className="text-slate-700 select-none">|</span>
+
+            {/* Editable title */}
+            {editingTitle ? (
+              <input
+                ref={titleInputRef}
+                value={titleDraft}
+                onChange={e => setTitleDraft(e.target.value)}
+                onBlur={handleTitleSave}
+                onKeyDown={e => {
+                  if (e.key === 'Enter') handleTitleSave()
+                  if (e.key === 'Escape') setEditingTitle(false)
+                }}
+                className="bg-transparent text-white text-sm font-medium focus:outline-none border-b border-indigo-500 px-0.5 w-48 min-w-0"
+                placeholder="Untitled Stage Plot"
+              />
+            ) : (
+              <button
+                onClick={handleTitleClick}
+                className="text-sm font-medium text-slate-300 hover:text-white hover:bg-slate-800/60 px-1.5 py-0.5 rounded transition-colors truncate max-w-xs"
+              >
+                {displayName}
+              </button>
+            )}
+
+            {/* Saved indicator */}
+            {savedStageplotId && (
+              <span className="flex items-center gap-1 text-[10px] text-green-500">
+                <span className="w-1.5 h-1.5 rounded-full bg-green-500 shrink-0" />
+                Saved {savedAt ? relativeTime(savedAt) : ''}
+              </span>
+            )}
+
+            <div className="flex-1" />
+
+            {/* Stats */}
+            <span className="hidden sm:block text-xs text-slate-600 mr-1">
+              {data.stagePlot.length} item{data.stagePlot.length !== 1 ? 's' : ''} · {data.members.length} member{data.members.length !== 1 ? 's' : ''}
             </span>
-          </div>
 
-          <span className="text-slate-700 select-none">|</span>
-
-          {/* Editable title */}
-          {editingTitle ? (
-            <input
-              ref={titleInputRef}
-              value={titleDraft}
-              onChange={e => setTitleDraft(e.target.value)}
-              onBlur={handleTitleSave}
-              onKeyDown={e => {
-                if (e.key === 'Enter') handleTitleSave()
-                if (e.key === 'Escape') setEditingTitle(false)
-              }}
-              className="bg-transparent text-white text-sm font-medium focus:outline-none border-b border-indigo-500 px-0.5 w-48 min-w-0"
-              placeholder="Untitled Stage Plot"
-            />
-          ) : (
+            {/* Download & Save button */}
             <button
-              onClick={handleTitleClick}
-              className="text-sm font-medium text-slate-300 hover:text-white hover:bg-slate-800/60 px-1.5 py-0.5 rounded transition-colors truncate max-w-xs"
+              onClick={() => setIsDownloadModalOpen(true)}
+              className="flex items-center gap-1.5 px-2.5 py-1 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 hover:text-white rounded text-xs transition-colors"
             >
-              {displayName}
-            </button>
-          )}
-
-          <div className="flex-1" />
-
-          {/* Stats */}
-          <span className="hidden sm:block text-xs text-slate-600 mr-1">
-            {data.stagePlot.length} item{data.stagePlot.length !== 1 ? 's' : ''} · {data.members.length} member{data.members.length !== 1 ? 's' : ''}
-          </span>
-
-          {/* Download button */}
-          <button
-            onClick={handleExportPNG}
-            className="flex items-center gap-1.5 px-2.5 py-1 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 hover:text-white rounded text-xs transition-colors"
-          >
-            <Download size={12} /> Download
-          </button>
-
-          {/* Share button + popover */}
-          <div ref={shareRef} className="relative">
-            <button
-              onClick={() => setShareOpen(o => !o)}
-              className="flex items-center gap-1.5 px-2.5 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded text-xs font-medium transition-colors"
-            >
-              <Share2 size={12} /> Share
+              <Download size={12} /> Download & Save
             </button>
 
-            {shareOpen && (
-              <div className="absolute right-0 top-full mt-2 w-72 bg-slate-900 border border-slate-700 rounded-lg shadow-2xl p-4 z-50">
-                <div className="flex items-center justify-between mb-3">
-                  <span className="text-xs font-semibold text-slate-300">Share stage plot</span>
-                  <button onClick={() => setShareOpen(false)} className="text-slate-600 hover:text-slate-400">
-                    <X size={13} />
-                  </button>
-                </div>
+            {/* Share button + popover */}
+            <div ref={shareRef} className="relative">
+              <button
+                onClick={handleOpenShare}
+                disabled={!savedStageplotId}
+                title={!savedStageplotId ? 'Download & Save first' : undefined}
+                className="flex items-center gap-1.5 px-2.5 py-1 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded text-xs font-medium transition-colors"
+              >
+                <Share2 size={12} /> Share
+              </button>
 
-                {!shareResult ? (
-                  <div className="space-y-2.5">
-                    <input
-                      type="email"
-                      value={shareEmail}
-                      onChange={e => setShareEmail(e.target.value)}
-                      onKeyDown={e => e.key === 'Enter' && handleShare()}
-                      placeholder="your@email.com"
-                      className="w-full bg-slate-800 border border-slate-700 rounded px-2.5 py-1.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500"
-                    />
-                    <button
-                      onClick={handleShare}
-                      disabled={isSaving || !shareEmail.trim()}
-                      className="w-full flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded px-3 py-1.5 text-sm font-medium transition-colors"
-                    >
-                      <Share2 size={13} />
-                      {isSaving ? 'Saving…' : 'Save & Get Link'}
+              {shareOpen && savedStageplotId && (
+                <div className="absolute right-0 top-full mt-2 w-72 bg-slate-900 border border-slate-700 rounded-lg shadow-2xl p-4 z-50">
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-xs font-semibold text-slate-300">Share stage plot</span>
+                    <button onClick={() => setShareOpen(false)} className="text-slate-600 hover:text-slate-400">
+                      <X size={13} />
                     </button>
-                    <p className="text-xs text-slate-600">We&apos;ll email you a magic link to access your stage plot anytime.</p>
                   </div>
-                ) : (
-                  <div className="space-y-2">
-                    <p className="text-xs text-green-400 font-medium flex items-center gap-1">
-                      <Check size={11} /> Saved! Magic link sent to {shareEmail}
-                    </p>
+
+                  <div className="space-y-3">
+                    {/* Share URL row */}
                     <div className="flex gap-1.5">
                       <input
                         readOnly
-                        value={shareUrl}
+                        value={shareUrlValue}
                         className="flex-1 min-w-0 bg-slate-800 border border-slate-700 rounded px-2 py-1.5 text-xs text-slate-400 focus:outline-none"
                       />
                       <button
-                        onClick={handleCopy}
+                        onClick={handleCopyShareUrl}
                         className="flex items-center gap-1 px-2.5 py-1.5 bg-slate-700 hover:bg-slate-600 text-white rounded text-xs transition-colors shrink-0"
                       >
                         {copied ? <CheckCheck size={12} className="text-green-400" /> : <Copy size={12} />}
                       </button>
                     </div>
+
+                    {/* Stats */}
+                    <div className="text-xs text-slate-500 space-y-1">
+                      {shareStats ? (
+                        <>
+                          <p>Viewed {shareStats.view_count} time{shareStats.view_count !== 1 ? 's' : ''}</p>
+                          <p>Created {relativeTime(shareStats.created_at)}</p>
+                        </>
+                      ) : (
+                        <p className="text-slate-600">Loading stats…</p>
+                      )}
+                      {savedAt && <p>Saved {relativeTime(savedAt)}</p>}
+                    </div>
+
+                    {/* Re-save with different email */}
                     <button
-                      onClick={() => { setShareResult(null); setShareEmail('') }}
+                      onClick={() => { setShareOpen(false); setIsDownloadModalOpen(true) }}
                       className="text-xs text-slate-600 hover:text-slate-400 transition-colors"
                     >
-                      Share with a different email
+                      Share with a different email →
                     </button>
                   </div>
-                )}
-              </div>
-            )}
+                </div>
+              )}
+            </div>
           </div>
-        </div>
-      </nav>
+        </nav>
+
+        <DownloadModal
+          isOpen={isDownloadModalOpen}
+          prefillEmail={data.details.email}
+          onClose={() => setIsDownloadModalOpen(false)}
+          onConfirm={handleSavePlot}
+          isGeneratingPdf={isSavingPlot}
+          lastSentEmail={null}
+        />
+      </>
     )
   }
 
