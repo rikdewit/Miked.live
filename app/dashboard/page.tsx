@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Music2, Plus, AlertTriangle, Loader } from 'lucide-react'
+import { Music2, Plus, AlertTriangle, Loader, MoreVertical } from 'lucide-react'
 import { supabase } from '@/utils/supabase'
 
 interface Stageplot {
@@ -30,6 +30,9 @@ export default function DashboardPage() {
   const [stageplots, setStageplots] = useState<Stageplot[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null)
+  const [renamingId, setRenamingId] = useState<string | null>(null)
+  const [renameValue, setRenameValue] = useState('')
 
   useEffect(() => {
     async function checkAuthAndFetch() {
@@ -62,7 +65,10 @@ export default function DashboardPage() {
         }
 
         const data = await res.json()
-        setStageplots(data.stageplots || [])
+        const sorted = (data.stageplots || []).sort(
+          (a: Stageplot, b: Stageplot) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
+        )
+        setStageplots(sorted)
       } catch (err) {
         console.error('Error fetching stageplots:', err)
         setError(err instanceof Error ? err.message : 'An error occurred')
@@ -73,6 +79,129 @@ export default function DashboardPage() {
 
     checkAuthAndFetch()
   }, [router])
+
+  // Close menu on outside click
+  useEffect(() => {
+    const handleMouseDown = (e: MouseEvent) => {
+      const target = e.target as Node
+      const isMenuButton = (target as Element).closest('[data-menu-button]')
+      const isMenuContent = (target as Element).closest('[data-menu-content]')
+
+      if (!isMenuButton && !isMenuContent) {
+        setOpenMenuId(null)
+      }
+    }
+
+    document.addEventListener('mousedown', handleMouseDown)
+    return () => document.removeEventListener('mousedown', handleMouseDown)
+  }, [])
+
+  const handleDelete = async (plotId: string) => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.access_token) return
+
+      const res = await fetch(`/api/stageplots/${plotId}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      })
+
+      if (res.ok) {
+        setStageplots(stageplots.filter(p => p.id !== plotId))
+        setOpenMenuId(null)
+      }
+    } catch (err) {
+      console.error('Error deleting stageplot:', err)
+    }
+  }
+
+  const handleRenameStart = (plot: Stageplot) => {
+    setRenamingId(plot.id)
+    setRenameValue(plot.bandName)
+    setOpenMenuId(null)
+  }
+
+  const handleRenameSave = async (plotId: string) => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.access_token) return
+
+      const res = await fetch(`/api/stageplots/${plotId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ bandName: renameValue }),
+      })
+
+      if (res.ok) {
+        const updated = stageplots
+          .map(p =>
+            p.id === plotId ? { ...p, bandName: renameValue, updated_at: new Date().toISOString() } : p
+          )
+          .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())
+        setStageplots(updated)
+        setRenamingId(null)
+        setRenameValue('')
+      }
+    } catch (err) {
+      console.error('Error renaming stageplot:', err)
+    }
+  }
+
+  const handleCopy = async (plot: Stageplot) => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.access_token) return
+
+      // Fetch full plot data
+      const getRes = await fetch(`/api/stageplots/${plot.id}`, {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      })
+
+      if (!getRes.ok) return
+
+      const { plotData } = await getRes.json()
+
+      // Create copy with new name
+      const copiedData = {
+        ...plotData,
+        details: {
+          ...plotData.details,
+          bandName: `${plot.bandName} copy`,
+        },
+      }
+
+      // Save as new stageplot
+      const saveRes = await fetch('/api/stageplots/save', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ plotData: copiedData }),
+      })
+
+      if (saveRes.ok) {
+        const { stageplotId } = await saveRes.json()
+        const newCopy: Stageplot = {
+          id: stageplotId,
+          bandName: `${plot.bandName} copy`,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        }
+        // Insert at top and sort by updated_at descending
+        const updated = [newCopy, ...stageplots].sort(
+          (a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
+        )
+        setStageplots(updated)
+        setOpenMenuId(null)
+      }
+    } catch (err) {
+      console.error('Error copying stageplot:', err)
+    }
+  }
 
   return (
     <div className="min-h-screen bg-slate-950">
@@ -132,18 +261,83 @@ export default function DashboardPage() {
             {stageplots.map(plot => (
               <div
                 key={plot.id}
-                onClick={() => router.push(`/stageplot?id=${plot.id}`)}
-                className="bg-slate-900 border border-slate-800 hover:border-slate-600 rounded-xl p-5 cursor-pointer transition-colors group"
+                onClick={() => renamingId !== plot.id && router.push(`/stageplot?id=${plot.id}`)}
+                className="bg-slate-900 border border-slate-800 hover:border-slate-600 rounded-xl p-5 cursor-pointer transition-colors group relative"
               >
                 {/* Card Top Row */}
                 <div className="flex items-start justify-between gap-3 mb-3">
                   <div className="flex items-center gap-2 flex-1 min-w-0">
                     <Music2 size={16} className="text-indigo-400 shrink-0" />
-                    <h3 className="text-white font-semibold truncate">
-                      {plot.bandName || <span className="italic text-slate-500">Untitled Stage Plot</span>}
-                    </h3>
+                    {renamingId === plot.id ? (
+                      <input
+                        autoFocus
+                        type="text"
+                        value={renameValue}
+                        onChange={e => setRenameValue(e.target.value)}
+                        onKeyDown={e => {
+                          if (e.key === 'Enter') {
+                            handleRenameSave(plot.id)
+                          } else if (e.key === 'Escape') {
+                            setRenamingId(null)
+                            setRenameValue('')
+                          }
+                        }}
+                        onBlur={() => handleRenameSave(plot.id)}
+                        onClick={e => e.stopPropagation()}
+                        className="flex-1 min-w-0 bg-slate-800 border border-slate-600 rounded px-2 py-1 text-white font-semibold text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      />
+                    ) : (
+                      <h3 className="text-white font-semibold truncate">
+                        {plot.bandName || <span className="italic text-slate-500">Untitled Stage Plot</span>}
+                      </h3>
+                    )}
                   </div>
-                  <div className="text-slate-600 group-hover:text-indigo-400 transition-colors shrink-0">→</div>
+                  <div className="relative" data-menu-button={plot.id}>
+                    <button
+                      onClick={e => {
+                        e.stopPropagation()
+                        setOpenMenuId(openMenuId === plot.id ? null : plot.id)
+                      }}
+                      className="text-slate-600 hover:text-indigo-400 transition-colors p-1 shrink-0"
+                      aria-label="More options"
+                      data-menu-button
+                    >
+                      <MoreVertical size={18} />
+                    </button>
+
+                    {/* Dropdown Menu */}
+                    {openMenuId === plot.id && (
+                      <div className="absolute top-full right-0 mt-1 w-44 bg-slate-900 border border-slate-700 rounded-lg shadow-2xl z-50" data-menu-content>
+                        <button
+                          onClick={e => {
+                            e.stopPropagation()
+                            handleRenameStart(plot)
+                          }}
+                          className="w-full text-left px-4 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors first:rounded-t-lg"
+                        >
+                          Rename
+                        </button>
+                        <button
+                          onClick={e => {
+                            e.stopPropagation()
+                            handleCopy(plot)
+                          }}
+                          className="w-full text-left px-4 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors"
+                        >
+                          Make a copy
+                        </button>
+                        <button
+                          onClick={e => {
+                            e.stopPropagation()
+                            handleDelete(plot.id)
+                          }}
+                          className="w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-red-950 hover:text-red-300 transition-colors last:rounded-b-lg"
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 {/* Card Bottom Row */}
