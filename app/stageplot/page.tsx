@@ -228,7 +228,7 @@ function DashboardPageInner() {
     data, setData, updateStageItems,
     addMember, removeMember, updateMemberName,
     addMemberInstrument, updateMemberInstrument, removeMemberInstrument,
-    loadFromServer, isHydrated, viewMode, setViewMode,
+    loadFromServer, isHydrated, viewMode, setViewMode, clearSaved,
   } = useStagePlot()
 
   // Loading stageplot by ID state
@@ -286,6 +286,7 @@ function DashboardPageInner() {
     } else {
       // New stageplot - start fresh with initial data instead of localStorage
       setData(INITIAL_RIDER_DATA)
+      clearSaved()
       setViewMode('editor')
       setLoadStatus('success')
     }
