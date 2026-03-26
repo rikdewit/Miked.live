@@ -3,7 +3,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import { Mic2, Download, Share2, Copy, CheckCheck, X, LogOut, UserCircle, Home } from 'lucide-react'
-import { usePostHog } from 'posthog-js/react'
 import { useStagePlot } from '@/providers/StagePlotProvider'
 import { supabase } from '@/utils/supabase'
 import { AuthModal } from '@/components/AuthModal'
@@ -12,7 +11,6 @@ import type { User } from '@supabase/supabase-js'
 export const Header: React.FC = () => {
   const pathname = usePathname()
   const router = useRouter()
-  const posthog = usePostHog()
   const { data, setData } = useStagePlot()
 
   // Auth state
@@ -63,7 +61,6 @@ export const Header: React.FC = () => {
   const handleLogoClick = () => router.push('/')
 
   const handleStart = () => {
-    posthog?.capture('start_now_clicked')
     router.push(user ? '/dashboard' : '/stageplot')
   }
 
@@ -414,46 +411,50 @@ export const Header: React.FC = () => {
               )}
             </div>
 
-            {/* User menu */}
-            {user && (
-              <div ref={userMenuRef} className="relative">
-                <button
-                  onClick={() => setUserMenuOpen(!userMenuOpen)}
-                  className="flex items-center gap-2 px-2 py-1 hover:bg-slate-800 rounded transition-colors"
-                  title="User menu"
-                >
-                  <UserCircle size={20} className="text-slate-300" />
-                </button>
+            {/* User menu or account button */}
+            <div ref={userMenuRef} className="relative">
+              <button
+                onClick={() => {
+                  if (user) {
+                    setUserMenuOpen(!userMenuOpen)
+                  } else {
+                    setIsAuthModalOpen(true)
+                  }
+                }}
+                className="flex items-center gap-2 px-2 py-1 hover:bg-slate-800 rounded transition-colors"
+                title={user ? "User menu" : "Sign in"}
+              >
+                <UserCircle size={20} className="text-slate-300" />
+              </button>
 
-                {userMenuOpen && (
-                  <div className="absolute right-0 top-full mt-2 w-48 bg-slate-900 border border-slate-700 rounded-lg shadow-2xl z-50">
-                    <div className="p-3 border-b border-slate-700">
-                      <p className="text-xs text-slate-500">Signed in as</p>
-                      <p className="text-xs text-slate-300 font-medium truncate">{user.email}</p>
-                    </div>
-                    <button
-                      onClick={async () => {
-                        setSigningOut(true)
-                        try {
-                          const { error } = await supabase.auth.signOut()
-                          if (error) throw error
-                          setUserMenuOpen(false)
-                        } catch (err) {
-                          console.error('Sign out failed:', err)
-                        } finally {
-                          setSigningOut(false)
-                        }
-                      }}
-                      disabled={signingOut}
-                      className="w-full text-left px-3 py-2 text-xs text-slate-300 hover:text-white hover:bg-slate-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                    >
-                      <LogOut size={13} />
-                      {signingOut ? 'Signing out...' : 'Sign out'}
-                    </button>
+              {user && userMenuOpen && (
+                <div className="absolute right-0 top-full mt-2 w-48 bg-slate-900 border border-slate-700 rounded-lg shadow-2xl z-50">
+                  <div className="p-3 border-b border-slate-700">
+                    <p className="text-xs text-slate-500">Signed in as</p>
+                    <p className="text-xs text-slate-300 font-medium truncate">{user.email}</p>
                   </div>
-                )}
-              </div>
-            )}
+                  <button
+                    onClick={async () => {
+                      setSigningOut(true)
+                      try {
+                        const { error } = await supabase.auth.signOut()
+                        if (error) throw error
+                        setUserMenuOpen(false)
+                      } catch (err) {
+                        console.error('Sign out failed:', err)
+                      } finally {
+                        setSigningOut(false)
+                      }
+                    }}
+                    disabled={signingOut}
+                    className="w-full text-left px-3 py-2 text-xs text-slate-300 hover:text-white hover:bg-slate-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                  >
+                    <LogOut size={13} />
+                    {signingOut ? 'Signing out...' : 'Sign out'}
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </nav>
 
@@ -497,65 +498,101 @@ export const Header: React.FC = () => {
     )
   }
 
+  // Landing page header
+  if (isLanding) {
+    return (
+      <nav className="no-print bg-slate-950 border-b border-slate-800/50 sticky top-0 z-50">
+        <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
+          {/* Logo */}
+          <div className="flex items-center gap-2 cursor-pointer" onClick={handleLogoClick}>
+            <div className="bg-indigo-600 p-1.5 rounded-lg">
+              <Mic2 className="w-5 h-5 text-white" />
+            </div>
+            <span className="text-xl font-bold tracking-tight">
+              Miked<span className="text-indigo-500">.live</span>
+            </span>
+          </div>
+
+          {/* Navigation */}
+          <div className="hidden md:flex items-center gap-6 text-sm font-medium text-slate-400">
+            <a href="#features" className="hover:text-indigo-400 transition-colors">Features</a>
+            <a href="#how-it-works" className="hover:text-indigo-400 transition-colors">How it Works</a>
+            <a href="/changelog" className="hover:text-indigo-400 transition-colors">Changelog</a>
+            <a href="/contact" className="hover:text-indigo-400 transition-colors">Contact</a>
+            <button
+              onClick={handleStart}
+              className="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium h-9 px-4 rounded-md transition-colors"
+            >
+              Start Now
+            </button>
+          </div>
+          <div className="md:hidden flex items-center gap-3 text-xs font-medium text-slate-400">
+            <a href="/changelog" className="hover:text-indigo-400 transition-colors">Changelog</a>
+            <a href="/contact" className="hover:text-indigo-400 transition-colors">Contact</a>
+            <button
+              onClick={handleStart}
+              className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-medium h-8 px-3 rounded-md transition-colors"
+            >
+              Start
+            </button>
+          </div>
+        </div>
+      </nav>
+    )
+  }
+
+  // Dashboard and other pages header
   return (
     <nav className="no-print bg-slate-950 border-b border-slate-800/50 sticky top-0 z-50">
-      <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
+      <div className="px-4 h-16 flex items-center gap-3">
         {/* Logo */}
-        <div className="flex items-center gap-2 cursor-pointer" onClick={handleLogoClick}>
-          <div className="bg-indigo-600 p-1.5 rounded-lg">
+        <div className="flex items-center gap-2 shrink-0">
+          <div className="bg-indigo-600 p-1.5 rounded-lg cursor-pointer" onClick={handleLogoClick} title="Go to home">
             <Mic2 className="w-5 h-5 text-white" />
           </div>
-          <span className="text-xl font-bold tracking-tight">
-            Miked<span className="text-indigo-500">.live</span>
-          </span>
         </div>
 
-        {/* Right side */}
-        {isLanding || !isFlowPage ? (
-          <>
-            <div className="hidden md:flex items-center gap-6 text-sm font-medium text-slate-400">
-              <a href={isLanding ? "#features" : "/#features"} className="hover:text-indigo-400 transition-colors">Features</a>
-              <a href={isLanding ? "#how-it-works" : "/#how-it-works"} className="hover:text-indigo-400 transition-colors">How it Works</a>
-              <a href="/changelog" className="hover:text-indigo-400 transition-colors">Changelog</a>
-              <a href="/contact" className="hover:text-indigo-400 transition-colors">Contact</a>
-              <button
-                onClick={handleStart}
-                className="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium h-9 px-4 rounded-md transition-colors"
-              >
-                Start Now
-              </button>
-            </div>
-            <div className="md:hidden flex items-center gap-3 text-xs font-medium text-slate-400">
-              <a href="/changelog" className="hover:text-indigo-400 transition-colors">Changelog</a>
-              <a href="/contact" className="hover:text-indigo-400 transition-colors">Contact</a>
-              <button
-                onClick={handleStart}
-                className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-medium h-8 px-3 rounded-md transition-colors"
-              >
-                Start
-              </button>
-            </div>
-          </>
-        ) : (
-          <div className="flex-1 flex items-center justify-end gap-6 text-sm text-slate-400">
-            <span className="hidden md:inline">
-              <span className={stepIndex >= 1 ? 'text-indigo-400 font-bold' : ''}>1. Band</span>
-              <span className="mx-3">→</span>
-              <span className={stepIndex >= 2 ? 'text-indigo-400 font-bold' : ''}>2. Stage</span>
-              <span className="mx-3">→</span>
-              <span className={stepIndex >= 3 ? 'text-indigo-400 font-bold' : ''}>3. Details</span>
-              <span className="mx-3">→</span>
-              <span className={stepIndex >= 4 ? 'text-indigo-400 font-bold' : ''}>4. Download</span>
-            </span>
-            <span className="md:hidden">
-              <span className={stepIndex >= 1 ? 'text-indigo-400 font-bold' : ''}>1</span>
-              <span className="mx-4">→</span>
-              <span className={stepIndex >= 2 ? 'text-indigo-400 font-bold' : ''}>2</span>
-              <span className="mx-4">→</span>
-              <span className={stepIndex >= 3 ? 'text-indigo-400 font-bold' : ''}>3</span>
-              <span className="mx-4">→</span>
-              <span className={stepIndex >= 4 ? 'text-indigo-400 font-bold' : ''}>4</span>
-            </span>
+        {/* Empty space */}
+        <div className="flex-1" />
+
+        {/* User menu */}
+        {user && (
+          <div ref={userMenuRef} className="relative">
+            <button
+              onClick={() => setUserMenuOpen(!userMenuOpen)}
+              className="flex items-center gap-2 px-2 py-1 hover:bg-slate-800 rounded transition-colors"
+              title="User menu"
+            >
+              <UserCircle size={20} className="text-slate-300" />
+            </button>
+
+            {userMenuOpen && (
+              <div className="absolute right-0 top-full mt-2 w-48 bg-slate-900 border border-slate-700 rounded-lg shadow-2xl z-50">
+                <div className="p-3 border-b border-slate-700">
+                  <p className="text-xs text-slate-500">Signed in as</p>
+                  <p className="text-xs text-slate-300 font-medium truncate">{user.email}</p>
+                </div>
+                <button
+                  onClick={async () => {
+                    setSigningOut(true)
+                    try {
+                      const { error } = await supabase.auth.signOut()
+                      if (error) throw error
+                      setUserMenuOpen(false)
+                    } catch (err) {
+                      console.error('Sign out failed:', err)
+                    } finally {
+                      setSigningOut(false)
+                    }
+                  }}
+                  disabled={signingOut}
+                  className="w-full text-left px-3 py-2 text-xs text-slate-300 hover:text-white hover:bg-slate-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                >
+                  <LogOut size={13} />
+                  {signingOut ? 'Signing out...' : 'Sign out'}
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>
