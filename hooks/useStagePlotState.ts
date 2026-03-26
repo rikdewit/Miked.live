@@ -65,23 +65,29 @@ export const useStagePlotState = () => {
     }
   }, [])
 
-  const loadFromServer = useCallback(async (stageplotId: string) => {
+  const loadFromServer = useCallback(async (stageplotId: string): Promise<'success' | 'unauthorized' | 'not_found' | 'error'> => {
     const { data: { session } } = await (await import('@/utils/supabase')).supabase.auth.getSession()
-    if (!session?.access_token) return
+    if (!session?.access_token) return 'unauthorized'
 
     try {
       const res = await fetch(`/api/stageplots/${stageplotId}`, {
         headers: { Authorization: `Bearer ${session.access_token}` },
       })
-      if (!res.ok) return
+
+      if (!res.ok) {
+        return res.status === 404 ? 'not_found' : res.status === 401 ? 'unauthorized' : 'error'
+      }
 
       const json = await res.json()
       if (json.plotData) {
         setData(json.plotData)
         setSaved(json.stageplotId, json.shareToken)
+        return 'success'
       }
+      return 'error'
     } catch (err) {
       console.error('Failed to load stageplot from server:', err)
+      return 'error'
     }
   }, [setSaved])
 

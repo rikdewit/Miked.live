@@ -12,6 +12,7 @@ import { INSTRUMENTS, INITIAL_RIDER_DATA } from '@/constants'
 import { generateMemberItems } from '@/utils/stageHelpers'
 import { BandMember, StageItem } from '@/types'
 import { StagePlot2DCanvas, MEMBER_COLORS } from '@/components/StagePlot2DCanvas'
+import { AuthModal } from '@/components/AuthModal'
 
 // ─── Helpers (mirrored from StepStagePlot) ────────────────────────────────────
 
@@ -228,18 +229,30 @@ function DashboardPageInner() {
     loadFromServer, isHydrated,
   } = useStagePlot()
 
+  // Loading stageplot by ID state
+  const [loadStatus, setLoadStatus] = useState<'idle' | 'loading' | 'success' | 'unauthorized' | 'not_found' | 'error'>('idle')
+  const [showAuthModal, setShowAuthModal] = useState(false)
+  const [stageplotIdToLoad, setStageplotIdToLoad] = useState<string | null>(null)
+
   // Handle stageplot loading based on URL param
   useEffect(() => {
     if (!isHydrated) return
     const id = searchParams.get('id')
     if (id) {
-      // Load existing stageplot from server
-      loadFromServer(id)
+      setLoadStatus('loading')
+      setStageplotIdToLoad(id)
+      loadFromServer(id).then(status => {
+        setLoadStatus(status)
+        if (status === 'unauthorized') {
+          setShowAuthModal(true)
+        }
+      })
     } else {
       // New stageplot - start fresh with initial data instead of localStorage
       setData(INITIAL_RIDER_DATA)
+      setLoadStatus('success')
     }
-  }, [isHydrated])
+  }, [isHydrated, searchParams, loadFromServer, setData])
 
   // Drag-from-sidebar state
   const [draggingMemberId, setDraggingMemberId] = useState<string | null>(null)
@@ -370,6 +383,45 @@ function DashboardPageInner() {
   const addLabel = () => updateStageItems([...data.stagePlot, { id: `lbl-${Date.now()}`, type: 'custom', x: 50, y: 50, label: 'Label', customWidth: 0, customDepth: 0 }])
 
   // ── Render ────────────────────────────────────────────────────────────────
+
+  // Show loading screen while loading stageplot by ID
+  if (loadStatus === 'loading') {
+    return (
+      <div className="flex-1 flex items-center justify-center bg-slate-900">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4" />
+          <p className="text-slate-400 text-sm">Loading stage plot…</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Show error screen for not found
+  if (loadStatus === 'not_found') {
+    return (
+      <div className="flex-1 flex items-center justify-center bg-slate-900 p-4">
+        <div className="bg-white rounded-xl shadow-xl p-8 text-center max-w-sm w-full">
+          <div className="text-4xl mb-4">🔍</div>
+          <h1 className="text-xl font-bold text-gray-900 mb-2">Stage plot not found</h1>
+          <p className="text-gray-500 text-sm">This stage plot doesn't exist or has been removed.</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Show error screen for other errors
+  if (loadStatus === 'error') {
+    return (
+      <div className="flex-1 flex items-center justify-center bg-slate-900 p-4">
+        <div className="bg-white rounded-xl shadow-xl p-8 text-center max-w-sm w-full">
+          <div className="text-4xl mb-4">⚠️</div>
+          <h1 className="text-xl font-bold text-gray-900 mb-2">Something went wrong</h1>
+          <p className="text-gray-500 text-sm">We couldn't load this stage plot. Please try again.</p>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="flex flex-1 min-h-0 overflow-hidden">
 
@@ -533,6 +585,21 @@ function DashboardPageInner() {
           </div>
         </div>
       )}
+
+      {/* Auth modal for loading private stageplot */}
+      <AuthModal
+        isOpen={showAuthModal}
+        onClose={() => setShowAuthModal(false)}
+        onAuthSuccess={() => {
+          setShowAuthModal(false)
+          if (stageplotIdToLoad) {
+            setLoadStatus('loading')
+            loadFromServer(stageplotIdToLoad).then(status => {
+              setLoadStatus(status)
+            })
+          }
+        }}
+      />
     </div>
   )
 }
