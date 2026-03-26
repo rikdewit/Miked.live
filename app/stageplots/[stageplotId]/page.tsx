@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { usePostHog } from 'posthog-js/react'
 import { StagePlot2DCanvas, MEMBER_COLORS } from '@/components/StagePlot2DCanvas'
 import { RiderData } from '@/types'
-import { Download, Share2, Loader2, Check, Copy, CheckCheck } from 'lucide-react'
+import { Download, Loader2 } from 'lucide-react'
 import { Mic2 } from 'lucide-react'
 
 interface PageProps {
@@ -26,7 +26,6 @@ export default function StagePlotViewPage({ params, searchParams }: PageProps) {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [isDownloading, setIsDownloading] = useState(false)
-  const [isCopied, setIsCopied] = useState(false)
 
   useEffect(() => {
     const fetchPlot = async () => {
@@ -85,16 +84,6 @@ export default function StagePlotViewPage({ params, searchParams }: PageProps) {
     img.src = url
   }, [plotData?.details?.bandName])
 
-  const handleCopyShareLink = useCallback(async () => {
-    const token = shareToken ?? share
-    if (!token) return
-    const url = `${window.location.origin}/stageplots/${stageplotId}?share=${token}`
-    try {
-      await navigator.clipboard.writeText(url)
-      setIsCopied(true)
-      setTimeout(() => setIsCopied(false), 2000)
-    } catch { /* ignore */ }
-  }, [shareToken, share, stageplotId])
 
   if (isLoading) {
     return (
@@ -130,25 +119,40 @@ export default function StagePlotViewPage({ params, searchParams }: PageProps) {
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-950">
-      {/* Minimal header */}
-      <nav className="bg-slate-950 border-b border-slate-800/50 px-4 h-10 flex items-center gap-2 shrink-0">
+      {/* Header with download button */}
+      <nav className="bg-slate-950 border-b border-slate-800/50 px-4 h-16 flex items-center gap-3 shrink-0">
         <div className="flex items-center gap-2">
-          <div className="bg-indigo-600 p-1 rounded-md">
-            <Mic2 className="w-3.5 h-3.5 text-white" />
+          <div className="bg-indigo-600 p-1.5 rounded-lg">
+            <Mic2 className="w-5 h-5 text-white" />
           </div>
-          <span className="text-sm font-bold tracking-tight">
+          <span className="text-base font-bold tracking-tight">
             Miked<span className="text-indigo-500">.live</span>
           </span>
         </div>
         {plotData?.details?.bandName && (
           <>
             <span className="text-slate-700 select-none">|</span>
-            <span className="text-sm text-slate-400 truncate">{plotData.details.bandName}</span>
+            <span className="text-base text-slate-300 truncate">{plotData.details.bandName}</span>
           </>
         )}
+
+        <div className="flex-1" />
+
         {viewCount !== null && (
-          <span className="ml-auto text-xs text-slate-600">{viewCount} view{viewCount !== 1 ? 's' : ''}</span>
+          <span className="hidden sm:block text-sm text-slate-600">
+            {viewCount} view{viewCount !== 1 ? 's' : ''}
+          </span>
         )}
+
+        {/* Download button */}
+        <button
+          onClick={handleDownloadPNG}
+          disabled={isDownloading}
+          className="flex items-center gap-1.5 px-3 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 hover:text-white rounded text-sm transition-colors disabled:opacity-50 disabled:cursor-wait"
+        >
+          {isDownloading ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
+          Download
+        </button>
       </nav>
 
       {/* Canvas */}
@@ -160,28 +164,6 @@ export default function StagePlotViewPage({ params, searchParams }: PageProps) {
             editable={false}
             members={plotData.members}
           />
-        )}
-      </div>
-
-      {/* Action bar */}
-      <div className="bg-slate-900 border-t border-slate-800 p-4 flex justify-center gap-3 flex-wrap shrink-0">
-        <button
-          onClick={handleDownloadPNG}
-          disabled={isDownloading}
-          className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-800 disabled:cursor-wait text-white rounded-lg font-semibold text-sm transition-colors"
-        >
-          {isDownloading ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
-          {isDownloading ? 'Generating…' : 'Download PNG'}
-        </button>
-
-        {(shareToken || share) && (
-          <button
-            onClick={handleCopyShareLink}
-            className="flex items-center gap-2 px-5 py-2.5 bg-slate-700 hover:bg-slate-600 text-white rounded-lg font-semibold text-sm transition-colors"
-          >
-            {isCopied ? <CheckCheck size={16} className="text-green-400" /> : <Copy size={16} />}
-            {isCopied ? 'Copied!' : 'Copy Share Link'}
-          </button>
         )}
       </div>
     </div>

@@ -56,6 +56,7 @@ export const Header: React.FC = () => {
   const isFlowPage = stepIndex !== -1
   const isLanding = stepIndex === 0
   const isStageplot = pathname === '/stageplot'
+  const isSharedStageplot = pathname.startsWith('/stageplots/')
 
   const handleLogoClick = () => router.push('/')
 
@@ -219,6 +220,10 @@ export const Header: React.FC = () => {
     const hrs = Math.floor(mins / 60)
     if (hrs < 24) return `${hrs}h ago`
     return `${Math.floor(hrs / 24)}d ago`
+  }
+
+  if (isSharedStageplot) {
+    return null
   }
 
   if (isStageplot) {
