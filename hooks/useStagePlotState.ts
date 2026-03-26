@@ -18,26 +18,34 @@ const INITIAL_SAVE_STATE: SaveState = {
   savedAt: null,
 }
 
-function loadSaveState(): SaveState {
-  try {
-    const raw = localStorage.getItem(SAVE_STATE_KEY)
-    return raw ? JSON.parse(raw) : INITIAL_SAVE_STATE
-  } catch {
-    return INITIAL_SAVE_STATE
-  }
-}
-
 export const useStagePlotState = () => {
-  const [data, setData] = useState<RiderData>(() => {
+  const [data, setData] = useState<RiderData>(INITIAL_RIDER_DATA);
+  const [saveState, setSaveStateInternal] = useState<SaveState>(INITIAL_SAVE_STATE);
+  const [isHydrated, setIsHydrated] = useState(false);
+  const [viewMode, setViewMode] = useState<'editor' | 'viewer'>('editor');
+
+  // Load from localStorage after hydration
+  useEffect(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
-      return saved ? JSON.parse(saved) : INITIAL_RIDER_DATA;
-    } catch {
-      return INITIAL_RIDER_DATA;
+      if (saved) {
+        setData(JSON.parse(saved));
+      }
+    } catch (err) {
+      console.error('Failed to load data from localStorage:', err);
     }
-  });
 
-  const [saveState, setSaveStateInternal] = useState<SaveState>(loadSaveState)
+    try {
+      const savedState = localStorage.getItem(SAVE_STATE_KEY);
+      if (savedState) {
+        setSaveStateInternal(JSON.parse(savedState));
+      }
+    } catch (err) {
+      console.error('Failed to load save state from localStorage:', err);
+    }
+
+    setIsHydrated(true);
+  }, []);
 
   // Save to localStorage whenever data changes
   useEffect(() => {
@@ -57,6 +65,32 @@ export const useStagePlotState = () => {
       console.error('Failed to persist save state:', err)
     }
   }, [])
+
+  const loadFromServer = useCallback(async (stageplotId: string): Promise<'success' | 'unauthorized' | 'not_found' | 'error'> => {
+    const { data: { session } } = await (await import('@/utils/supabase')).supabase.auth.getSession()
+    if (!session?.access_token) return 'unauthorized'
+
+    try {
+      const res = await fetch(`/api/stageplots/${stageplotId}`, {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      })
+
+      if (!res.ok) {
+        return res.status === 404 ? 'not_found' : res.status === 401 ? 'unauthorized' : 'error'
+      }
+
+      const json = await res.json()
+      if (json.plotData) {
+        setData(json.plotData)
+        setSaved(json.stageplotId, json.shareToken)
+        return 'success'
+      }
+      return 'error'
+    } catch (err) {
+      console.error('Failed to load stageplot from server:', err)
+      return 'error'
+    }
+  }, [setSaved])
 
   const clearSaved = useCallback(() => {
     setSaveStateInternal(INITIAL_SAVE_STATE)
@@ -246,5 +280,9 @@ export const useStagePlotState = () => {
     savedAt: saveState.savedAt,
     setSaved,
     clearSaved,
+    loadFromServer,
+    isHydrated,
+    viewMode,
+    setViewMode,
   };
 };
