@@ -2,6 +2,7 @@
 
 import React, { useState, useMemo, useRef, useCallback, useEffect, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
+import { Download, Loader2 } from 'lucide-react'
 import {
   Plus, Trash2, GripVertical, ChevronDown, ChevronUp,
   Check, RefreshCw, AlertTriangle,
@@ -10,9 +11,10 @@ import {
 import { useStagePlot } from '@/providers/StagePlotProvider'
 import { INSTRUMENTS, INITIAL_RIDER_DATA } from '@/constants'
 import { generateMemberItems } from '@/utils/stageHelpers'
-import { BandMember, StageItem } from '@/types'
+import { BandMember, StageItem, RiderData } from '@/types'
 import { StagePlot2DCanvas, MEMBER_COLORS } from '@/components/StagePlot2DCanvas'
 import { AuthModal } from '@/components/AuthModal'
+import { supabase } from '@/utils/supabase'
 
 // ─── Helpers (mirrored from StepStagePlot) ────────────────────────────────────
 
@@ -226,13 +228,16 @@ function DashboardPageInner() {
     data, setData, updateStageItems,
     addMember, removeMember, updateMemberName,
     addMemberInstrument, updateMemberInstrument, removeMemberInstrument,
-    loadFromServer, isHydrated,
+    loadFromServer, isHydrated, viewMode, setViewMode,
   } = useStagePlot()
 
   // Loading stageplot by ID state
   const [loadStatus, setLoadStatus] = useState<'idle' | 'loading' | 'success' | 'unauthorized' | 'not_found' | 'error'>('idle')
+  const [viewPlotData, setViewPlotData] = useState<RiderData | null>(null)
+  const [viewCount, setViewCount] = useState<number | null>(null)
   const [showAuthModal, setShowAuthModal] = useState(false)
   const [stageplotIdToLoad, setStageplotIdToLoad] = useState<string | null>(null)
+  const [isDownloading, setIsDownloading] = useState(false)
 
   // Handle stageplot loading based on URL param
   useEffect(() => {
@@ -241,15 +246,47 @@ function DashboardPageInner() {
     if (id) {
       setLoadStatus('loading')
       setStageplotIdToLoad(id)
-      loadFromServer(id).then(status => {
-        setLoadStatus(status)
-        if (status === 'unauthorized') {
-          setShowAuthModal(true)
+
+      // Try to load with owner auth first
+      ;(async () => {
+        try {
+          const { data: { session } } = await supabase.auth.getSession()
+          const headers = session?.access_token
+            ? { Authorization: `Bearer ${session.access_token}` }
+            : {}
+
+          const res = await fetch(`/api/stageplots/${id}`, { headers })
+
+          if (!res.ok) {
+            const status = res.status === 404 ? 'not_found' : res.status === 401 ? 'unauthorized' : 'error'
+            setLoadStatus(status)
+            return
+          }
+
+          const json = await res.json()
+
+          if (json.accessLevel === 'owner') {
+            // Owner — load into editor via loadFromServer
+            setViewMode('editor')
+            loadFromServer(id).then(status => {
+              setLoadStatus(status)
+            })
+          } else {
+            // Guest — show read-only viewer
+            setViewPlotData(json.plotData)
+            setData(json.plotData) // Load into context so header can display the name
+            setViewCount(json.view_count ?? null)
+            setViewMode('viewer')
+            setLoadStatus('success')
+          }
+        } catch {
+          setLoadStatus('error')
         }
-      })
+      })()
     } else {
       // New stageplot - start fresh with initial data instead of localStorage
       setData(INITIAL_RIDER_DATA)
+      setViewMode('editor')
       setLoadStatus('success')
     }
   }, [isHydrated, searchParams, loadFromServer, setData])
@@ -372,6 +409,36 @@ function DashboardPageInner() {
     })
   }, [draggingMemberId, dragPos, data.members, data.stagePlot])
 
+  // ── Download handler (shared by editor and viewer) ────────────────────────
+  const handleDownloadPNG = useCallback(() => {
+    const svg = document.querySelector<SVGSVGElement>('[data-export-svg]')
+    if (!svg) return
+    setIsDownloading(true)
+    const xml = new XMLSerializer().serializeToString(svg)
+    const blob = new Blob([xml], { type: 'image/svg+xml;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const img = new Image()
+    img.onload = () => {
+      const c = document.createElement('canvas')
+      c.width = 1600
+      c.height = 1000
+      const ctx = c.getContext('2d')
+      if (!ctx) { setIsDownloading(false); return }
+      ctx.drawImage(img, 0, 0, 1600, 1000)
+      URL.revokeObjectURL(url)
+      c.toBlob(b => {
+        if (!b) { setIsDownloading(false); return }
+        const a = document.createElement('a')
+        a.href = URL.createObjectURL(b)
+        const bandName = viewMode === 'viewer' ? viewPlotData?.details?.bandName : data.details?.bandName
+        a.download = `${bandName || 'stage-plot'}.png`
+        a.click()
+        setIsDownloading(false)
+      })
+    }
+    img.src = url
+  }, [viewMode, viewPlotData?.details?.bandName, data.details?.bandName])
+
   // ── Toolbar actions ───────────────────────────────────────────────────────
   const addMonitor = () => {
     const nextNum = Math.max(...data.stagePlot.filter(i => i.type === 'monitor').map(i => i.monitorNumber || 0), 0) + 1
@@ -417,6 +484,50 @@ function DashboardPageInner() {
           <div className="text-4xl mb-4">⚠️</div>
           <h1 className="text-xl font-bold text-gray-900 mb-2">Something went wrong</h1>
           <p className="text-gray-500 text-sm">We couldn't load this stage plot. Please try again.</p>
+        </div>
+      </div>
+    )
+  }
+
+  // ── VIEWER MODE (read-only) ────────────────────────────────────────────────
+  if (viewMode === 'viewer' && viewPlotData) {
+    return (
+      <div className="fixed inset-0 flex flex-col bg-slate-950 z-40">
+        {/* Nav bar with viewer info and download */}
+        <nav className="bg-slate-950 border-b border-slate-800/50 px-4 h-16 flex items-center gap-3 shrink-0">
+          {viewPlotData?.details?.bandName && (
+            <span className="text-base text-slate-300 truncate">{viewPlotData.details.bandName}</span>
+          )}
+
+          <div className="flex-1" />
+
+          {viewCount !== null && (
+            <span className="hidden sm:block text-sm text-slate-600">
+              {viewCount} view{viewCount !== 1 ? 's' : ''}
+            </span>
+          )}
+
+          {/* Download button */}
+          <button
+            onClick={handleDownloadPNG}
+            disabled={isDownloading}
+            className="flex items-center gap-1.5 px-3 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 hover:text-white rounded text-sm transition-colors disabled:opacity-50 disabled:cursor-wait"
+          >
+            {isDownloading ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
+            Download
+          </button>
+        </nav>
+
+        {/* Canvas */}
+        <div className="flex-1 overflow-hidden">
+          {viewPlotData && (
+            <StagePlot2DCanvas
+              items={viewPlotData.stagePlot}
+              setItems={() => {}}
+              editable={false}
+              members={viewPlotData.members}
+            />
+          )}
         </div>
       </div>
     )
