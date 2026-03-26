@@ -51,6 +51,8 @@ export const Header: React.FC = () => {
     return () => subscription?.unsubscribe()
   }, [])
 
+  const { viewMode } = useStagePlot()
+
   const routes = ['/', '/band', '/stage', '/details', '/rider-preview']
   const stepIndex = routes.indexOf(pathname)
   const isFlowPage = stepIndex !== -1
@@ -143,8 +145,8 @@ export const Header: React.FC = () => {
   const hasUnsavedChanges = lastSavedDataRef.current !== null && lastSavedDataRef.current !== JSON.stringify(data)
   const isSaveDisabled = isSavingPlot || !hasUnsavedChanges
 
-  const shareUrlValue = savedStageplotId && savedShareToken
-    ? `${typeof window !== 'undefined' ? window.location.origin : ''}/stageplots/${savedStageplotId}?share=${savedShareToken}`
+  const shareUrlValue = savedStageplotId
+    ? `${typeof window !== 'undefined' ? window.location.origin : ''}/stageplot?id=${savedStageplotId}`
     : ''
 
   const handleSavePlot = useCallback(async () => {
@@ -187,15 +189,15 @@ export const Header: React.FC = () => {
 
   const handleOpenShare = useCallback(async () => {
     setShareOpen(o => !o)
-    if (!savedStageplotId || !savedShareToken || shareStats) return
+    if (!savedStageplotId || shareStats) return
     try {
-      const res = await fetch(`/api/stageplots/${savedStageplotId}?share=${savedShareToken}`)
+      const res = await fetch(`/api/stageplots/${savedStageplotId}`)
       if (res.ok) {
         const json = await res.json()
         setShareStats({ view_count: json.view_count ?? 0, created_at: json.created_at })
       }
     } catch { /* ignore */ }
-  }, [savedStageplotId, savedShareToken, shareStats])
+  }, [savedStageplotId, shareStats])
 
   const handleCopyShareUrl = useCallback(() => {
     if (!shareUrlValue) return
@@ -224,6 +226,34 @@ export const Header: React.FC = () => {
 
   if (isSharedStageplot) {
     return null
+  }
+
+  // Viewer mode - show minimal header for anonymous viewers
+  if (isStageplot && viewMode === 'viewer') {
+    return (
+      <nav className="no-print bg-slate-950 border-b border-slate-800/50 sticky top-0 z-50">
+        <div className="px-4 h-16 flex items-center gap-3">
+          <div className="flex items-center gap-2 shrink-0">
+            <div className="bg-indigo-600 p-1.5 rounded-lg cursor-pointer" onClick={handleLogoClick} title="Go to home">
+              <Mic2 className="w-5 h-5 text-white" />
+            </div>
+          </div>
+
+          {data.details.bandName && (
+            <span className="text-base font-medium text-slate-300">{data.details.bandName}</span>
+          )}
+
+          <div className="flex-1" />
+
+          <button
+            onClick={handleExportPNG}
+            className="flex items-center gap-1.5 px-3 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 hover:text-white rounded text-sm transition-colors"
+          >
+            <Download size={14} /> Download
+          </button>
+        </div>
+      </nav>
+    )
   }
 
   if (isStageplot) {

@@ -22,6 +22,7 @@ export const useStagePlotState = () => {
   const [data, setData] = useState<RiderData>(INITIAL_RIDER_DATA);
   const [saveState, setSaveStateInternal] = useState<SaveState>(INITIAL_SAVE_STATE);
   const [isHydrated, setIsHydrated] = useState(false);
+  const [viewMode, setViewMode] = useState<'editor' | 'viewer'>('editor');
 
   // Load from localStorage after hydration
   useEffect(() => {
@@ -281,5 +282,7 @@ export const useStagePlotState = () => {
     clearSaved,
     loadFromServer,
     isHydrated,
+    viewMode,
+    setViewMode,
   };
 };

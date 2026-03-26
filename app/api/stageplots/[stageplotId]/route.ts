@@ -8,8 +8,6 @@ export async function GET(
 ) {
   try {
     const { stageplotId } = await params
-    const searchParams = request.nextUrl.searchParams
-    const shareToken = searchParams.get('share')
 
     if (!stageplotId) {
       return NextResponse.json({ error: 'Missing stageplotId' }, { status: 400 })
@@ -76,36 +74,31 @@ export async function GET(
       }
     }
 
-    // 2. Try guest access via share token
-    if (shareToken) {
-      const { data: plot, error: plotError } = await supabase
-        .from('stage_plots')
-        .select('*')
-        .eq('id', stageplotId)
-        .eq('share_token', shareToken)
-        .single()
+    // 2. Public guest access — no authentication required
+    const { data: plot, error: plotError } = await supabase
+      .from('stage_plots')
+      .select('*')
+      .eq('id', stageplotId)
+      .single()
 
-      if (plotError || !plot) {
-        return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
-      }
-
-      // Increment view count
-      await supabase
-        .from('stage_plots')
-        .update({ view_count: (plot.view_count ?? 0) + 1 })
-        .eq('id', stageplotId)
-
-      return NextResponse.json({
-        plotData: plot.plot_data as RiderData,
-        stageplotId: plot.id,
-        shareToken: plot.share_token,
-        accessLevel: 'guest',
-        view_count: (plot.view_count ?? 0) + 1,
-        created_at: plot.created_at,
-      })
+    if (plotError || !plot) {
+      return NextResponse.json({ error: 'not_found' }, { status: 404 })
     }
 
-    return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
+    // Increment view count for guest access
+    await supabase
+      .from('stage_plots')
+      .update({ view_count: (plot.view_count ?? 0) + 1 })
+      .eq('id', stageplotId)
+
+    return NextResponse.json({
+      plotData: plot.plot_data as RiderData,
+      stageplotId: plot.id,
+      shareToken: plot.share_token,
+      accessLevel: 'guest',
+      view_count: (plot.view_count ?? 0) + 1,
+      created_at: plot.created_at,
+    })
   } catch (error) {
     console.error('API error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
