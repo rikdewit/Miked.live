@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react';
+import React from 'react';
 import { motion } from 'motion/react';
 import {
   Layout,
@@ -10,44 +10,15 @@ import {
   Music,
   ArrowRight,
   CheckCircle2,
-  Box,
-  Layers,
 } from 'lucide-react';
-import { MemberPreview3D } from './MemberPreview3D';
-import { StagePlotCanvas } from './StagePlotCanvas';
 import { Footer } from './Footer';
-import type { StageItem } from '@/types';
 
 interface LandingProps {
   onStart: () => void;
 }
 
-// Default rock band members for preview
-const ROCK_BAND_MEMBERS = [
-  {
-    id: 'i0kaczwfs',
-    name: 'Drummer',
-    instruments: [{ instrumentId: 'drums', inputs: [] }],
-  },
-  {
-    id: 'dvbxo4prq',
-    name: 'Bassist',
-    instruments: [{ instrumentId: 'bass_amp', inputs: [] }],
-  },
-  {
-    id: '7bjtpzq6u',
-    name: 'Guitarist',
-    instruments: [{ instrumentId: 'gtr_amp', inputs: [] }],
-  },
-  {
-    id: 'txa0opdqa',
-    name: 'Lead Singer',
-    instruments: [{ instrumentId: 'voc_lead', inputs: [] }],
-  },
-];
-
-// Pre-configured rock band stage plot setup
-const LANDING_STAGE_PLOT: StageItem[] = [
+// Pre-configured rock band stage plot setup (to be replaced with 2D demo)
+const LANDING_STAGE_PLOT: any = [
   {
     x: 51.88274108786931,
     y: 10.551932367149792,
@@ -204,70 +175,20 @@ Button.displayName = 'Button';
 
 // --- Main Component ---
 export const Landing: React.FC<LandingProps> = ({ onStart }) => {
-  const [stageItems, setStageItems] = useState<StageItem[]>(LANDING_STAGE_PLOT);
-  const [viewMode, setViewMode] = useState<'isometric' | 'top'>('isometric');
-  const [showViewToggle, setShowViewToggle] = React.useState(false);
-  const [topViewPadding, setTopViewPadding] = React.useState(0.6);
-
-  React.useEffect(() => {
-    const timer = setTimeout(() => setShowViewToggle(true), 1000);
-    return () => clearTimeout(timer);
-  }, []);
-
-  React.useEffect(() => {
-    const handleResize = () => {
-      setTopViewPadding(window.innerWidth < 768 ? 0.1 : 0.6);
-    };
-
-    handleResize();
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-50 font-sans selection:bg-indigo-500/30">
-      {/* Hero + Stage Section */}
-      <section className="relative h-[100vh] sm:h-[100vh] md:h-[140vh] flex flex-col overflow-hidden">
-        {/* Stage Plot - Full Background */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.7 }}
-          className="absolute inset-0 w-full h-full"
-        >
+      {/* Hero Section */}
+      <section className="relative min-h-screen flex flex-col items-center justify-center overflow-hidden pb-32 md:pb-56">
+        {/* Background Gradients */}
+        <div className="absolute inset-0 pointer-events-none overflow-hidden">
+          <div className="absolute top-1/2 -left-40 md:left-1/4 -translate-y-1/2 w-80 h-80 bg-indigo-500/20 rounded-full blur-[100px]" />
+          <div className="absolute top-1/3 -right-32 md:right-1/4 -translate-y-1/2 w-[32rem] h-[32rem] bg-purple-500/15 rounded-full blur-[100px]" />
+          <div className="absolute bottom-1/4 -right-48 md:right-1/3 w-96 h-96 bg-purple-500/20 rounded-full blur-[120px]" />
+          <div className="absolute -bottom-32 left-1/2 w-[40rem] h-[40rem] bg-purple-500/15 rounded-full blur-[120px]" />
+        </div>
 
-          <div className="relative w-full h-full pt-48 sm:pt-40 md:pt-0" style={{ background: 'transparent' }}>
-            {/* Background Gradients */}
-            <div className="absolute inset-0 h-100 pointer-events-none overflow-hidden">
-              <div className="absolute top-1/2 -left-40 md:left-1/4 -translate-y-1/2 w-80 h-80 bg-indigo-500/20 rounded-full blur-[100px]" />
-              <div className="absolute top-1/3 -right-32 md:right-1/4 -translate-y-1/2 w-[32rem] h-[32rem] bg-purple-500/15 rounded-full blur-[100px]" />
-              <div className="absolute bottom-1/4 -right-48 md:right-1/3 w-96 h-96 bg-purple-500/20 rounded-full blur-[120px]" />
-              <div className="absolute -bottom-32 left-1/2 w-[40rem] h-[40rem] bg-purple-500/15 rounded-full blur-[120px]" />
-            </div>
-            {/* Canvas - Square Container */}
-            <div className="flex items-center justify-center w-full aspect-square p-4 mt-12 sm:mt-20 md:mt-0 h-fit">
-              <div className="w-full">
-                <StagePlotCanvas
-                  items={stageItems}
-                  setItems={setStageItems}
-                  editable={true}
-                  viewMode={viewMode}
-                  isLandingPage={true}
-                  members={ROCK_BAND_MEMBERS}
-                  gridCellColor="#334155"
-                  gridSectionColor="#334155"
-                  platformColor="#64748b"
-                  showAudienceLabel={false}
-                  showItemLabels={viewMode === 'top'}
-                  topViewPadding={topViewPadding}
-                  responsiveLookAt={true}
-                />
-              </div>
-            </div>
-          </div>
-        </motion.div>
-
-        {/* Hero Content Overlay */}
+        {/* Hero Content */}
         <div className="relative z-50 flex flex-col items-center justify-start pt-24 flex-1 pointer-events-none px-4">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -288,7 +209,7 @@ export const Landing: React.FC<LandingProps> = ({ onStart }) => {
               <span className="text-indigo-400">Done in 5 Minutes.</span>
             </h1>
             <p className="text-base md:text-lg text-slate-200 mb-8 leading-relaxed">
-              Drag, drop, and download. The fastest way to create professional 3D stage plots and input lists for your next show.
+              Drag, drop, and download. The fastest way to create professional stage plots and input lists for your next show.
             </p>
             <div className="flex flex-col md:flex-row items-center justify-center gap-4">
               <Button
@@ -310,79 +231,6 @@ export const Landing: React.FC<LandingProps> = ({ onStart }) => {
           </motion.div>
         </div>
 
-        {/* View Toggle Buttons - Absolute overlay */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: showViewToggle ? 1 : 0 }}
-          transition={{ duration: 0.4 }}
-          className="absolute top-6 right-6 z-40 flex items-center justify-center gap-2 pointer-events-auto"
-        >
-          <button
-            onClick={() => setViewMode('isometric')}
-            className={`flex items-center justify-center w-10 h-10 rounded-md font-medium transition-colors ${
-              viewMode === 'isometric'
-                ? 'bg-indigo-600 text-white shadow-lg'
-                : 'bg-slate-800/80 text-slate-400 hover:text-slate-200 backdrop-blur-sm hover:bg-slate-800'
-            }`}
-            title="3D View"
-          >
-            <Box size={16} />
-          </button>
-          <button
-            onClick={() => setViewMode('top')}
-            className={`flex items-center justify-center w-10 h-10 rounded-md font-medium transition-colors ${
-              viewMode === 'top'
-                ? 'bg-indigo-600 text-white shadow-lg'
-                : 'bg-slate-800/80 text-slate-400 hover:text-slate-200 backdrop-blur-sm hover:bg-slate-800'
-            }`}
-            title="Top View"
-          >
-            <Layers size={16} />
-          </button>
-        </motion.div>
-      </section>
-
-      {/* Band Member Previews */}
-      <section className="pt-8 sm:pt-8 md:pt-24 pb-16 md:pb-24 px-4 relative overflow-hidden border border-slate-800">
-        {/* Background Orbs - gradient from bottom */}
-        <div className="absolute inset-0 pointer-events-none overflow-hidden">
-          {/* Left side orb - bottom */}
-          <div className="absolute -bottom-48 -left-64 md:-left-40 w-[32rem] h-[32rem] bg-purple-500/10 rounded-full blur-[120px]" />
-          {/* Right side orb - bottom */}
-          <div className="absolute -bottom-64 -right-64 md:-right-40 w-[40rem] h-[40rem] bg-indigo-500/15 rounded-full blur-[140px]" />
-        </div>
-        <div className="container mx-auto relative z-10">
-          <motion.div
-            initial={{ opacity: 0, y: 40 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.7, delay: 0.4 }}
-            className="relative max-w-6xl mx-auto"
-          >
-            <div className="mb-8">
-              <h2 className="text-2xl md:text-3xl font-bold text-white mb-2">Create your band members</h2>
-              <p className="text-slate-400">Add instruments, customize gear, and configure inputs</p>
-            </div>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {ROCK_BAND_MEMBERS.map((member) => (
-                <div
-                  key={member.id}
-                  className="rounded-xl border border-slate-800 bg-slate-900/50 backdrop-blur-sm overflow-hidden shadow-lg hover:border-indigo-500/30 transition-colors duration-150 group"
-                >
-                  {/* Canvas container */}
-                  <div className="aspect-square bg-slate-950 relative">
-                    <MemberPreview3D member={member} isSidebarPreview={true} isDragging={false} />
-                  </div>
-                  {/* Label */}
-                  <div className="p-3 bg-slate-950/50 border-t border-slate-800">
-                    <p className="text-sm font-medium text-slate-200 text-center group-hover:text-indigo-400 transition-colors">
-                      {member.name}
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </motion.div>
-        </div>
       </section>
 
       {/* Features Grid */}
@@ -409,8 +257,8 @@ export const Landing: React.FC<LandingProps> = ({ onStart }) => {
             />
             <FeatureCard
               icon={<Layout className="w-6 h-6 text-indigo-400" />}
-              title="3D Stage Designer"
-              description="Visualize your setup in 3D or Top-Down view. Place monitors, power drops, and band members easily."
+              title="Stage Designer"
+              description="Visualize your setup with professional stage plots. Place monitors, power drops, and band members easily."
             />
             <FeatureCard
               icon={<FileDown className="w-6 h-6 text-emerald-400" />}

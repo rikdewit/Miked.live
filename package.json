@@ -11,8 +11,6 @@
   "dependencies": {
     "@react-email/components": "^1.0.8",
     "@react-email/render": "^2.0.4",
-    "@react-three/drei": "^10.7.7",
-    "@react-three/fiber": "^9.5.0",
     "@supabase/ssr": "^0.8.0",
     "@supabase/supabase-js": "^2.97.0",
     "@tiptap/extension-bubble-menu": "^3.19.0",
@@ -29,8 +27,7 @@
     "posthog-js": "^1.351.3",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
-    "resend": "^6.9.2",
-    "three": "0.160.0"
+    "resend": "^6.9.2"
   },
   "devDependencies": {
     "@tailwindcss/typography": "^0.5.19",
