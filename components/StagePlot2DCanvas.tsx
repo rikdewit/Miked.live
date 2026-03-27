@@ -602,11 +602,99 @@ export const StagePlot2DCanvas: React.FC<StagePlot2DCanvasProps> = ({
     fixedCornerX: number;  // SVG coords of the fixed corner
     fixedCornerY: number;
   } | null>(null);
+  const [menuBarPos, setMenuBarPos] = useState<{ top: number; left: number } | null>(null);
+  const menuBarRef = useRef<HTMLDivElement>(null);
+  const itemsRef = useRef(items);
+  itemsRef.current = items;
 
   const setSvgRef = useCallback((el: SVGSVGElement | null) => {
     (svgRef as React.MutableRefObject<SVGSVGElement | null>).current = el;
     if (exportRef) (exportRef as React.MutableRefObject<SVGSVGElement | null>).current = el;
   }, [exportRef]);
+
+  // Track selected item's x/y for menu bar repositioning during drag (but not rotation)
+  const selectedItemPos = items.find(i => i.id === selectedId);
+  const selectedPosX = selectedItemPos?.x;
+  const selectedPosY = selectedItemPos?.y;
+
+  // Calculate menu bar position above selected item
+  React.useEffect(() => {
+    if (!selectedId || !svgRef.current) {
+      setMenuBarPos(null);
+      return;
+    }
+
+    const selectedItem = itemsRef.current.find(i => i.id === selectedId);
+    if (!selectedItem) {
+      setMenuBarPos(null);
+      return;
+    }
+
+    const svg = svgRef.current;
+    const container = svg.parentElement;
+    if (!container) return;
+
+    const svgRect = svg.getBoundingClientRect();
+    const containerRect = container.getBoundingClientRect();
+
+    // SVG element's position relative to its container
+    const svgOffsetX = svgRect.left - containerRect.left;
+    const svgOffsetY = svgRect.top - containerRect.top;
+
+    // Item position as percentage (0-100)
+    const itemPctX = selectedItem.x;
+    const itemPctY = selectedItem.y;
+
+    // Get item's bounding box to find top edge
+    const config = getItemConfig(selectedItem);
+    const w = mW(selectedItem.customWidth ?? config.width);
+    const h = mH(selectedItem.customDepth ?? config.depth);
+    const bbox = getItemBoundingBox(selectedItem, w, h);
+
+    // Account for preserveAspectRatio="xMidYMid meet": SVG content may not fill the full element rect
+    const svgAR = SVG_W / SVG_H;
+    const elementAR = svgRect.width / svgRect.height;
+    let contentWidth: number, contentHeight: number, contentOffsetX: number, contentOffsetY: number;
+    if (elementAR > svgAR) {
+      // Pillar-boxed: content fills full height, centered horizontally
+      contentHeight = svgRect.height;
+      contentWidth = contentHeight * svgAR;
+      contentOffsetX = (svgRect.width - contentWidth) / 2;
+      contentOffsetY = 0;
+    } else {
+      // Letter-boxed: content fills full width, centered vertically
+      contentWidth = svgRect.width;
+      contentHeight = contentWidth / svgAR;
+      contentOffsetX = 0;
+      contentOffsetY = (svgRect.height - contentHeight) / 2;
+    }
+
+    // Convert percentage to content pixels
+    const itemPixelX = (itemPctX / 100) * contentWidth;
+    const itemPixelY = (itemPctY / 100) * contentHeight;
+
+    // Account for rotation: use AABB half-height of rotated bbox
+    const angle = selectedItem.rotation || 0; // radians
+    const cosA = Math.abs(Math.cos(angle));
+    const sinA = Math.abs(Math.sin(angle));
+    const rotatedHalfH = bbox.halfW * sinA + bbox.halfH * cosA;
+
+    // Scale bbox from SVG units to screen pixels
+    const rotatedHalfHScreen = rotatedHalfH * (contentHeight / SVG_H);
+
+    const MENU_GAP = 10;
+    const menuBarHeight = menuBarRef.current?.offsetHeight ?? 34;
+    const relativeLeft = svgOffsetX + contentOffsetX + itemPixelX;
+    // Subtract menuBarHeight so the bottom edge of the menu is MENU_GAP above the item (symmetric with bottom)
+    let relativeTop = svgOffsetY + contentOffsetY + itemPixelY - rotatedHalfHScreen - MENU_GAP - menuBarHeight;
+
+    // If menu would be off-screen on top, flip it below the item
+    if (relativeTop < 0) {
+      relativeTop = svgOffsetY + contentOffsetY + itemPixelY + rotatedHalfHScreen + MENU_GAP;
+    }
+
+    setMenuBarPos({ top: relativeTop, left: relativeLeft });
+  }, [selectedId, selectedPosX, selectedPosY]); // excludes rotation — position only recalculates on selection or drag
 
   const toSvgCoords = useCallback((clientX: number, clientY: number) => {
     const svg = svgRef.current;
@@ -811,8 +899,16 @@ export const StagePlot2DCanvas: React.FC<StagePlot2DCanvasProps> = ({
       </svg>
 
       {/* Selected item toolbar */}
-      {selectedItem && editable && (
-        <div className="absolute top-2 left-1/2 -translate-x-1/2 flex items-center gap-0.5 bg-slate-900/95 backdrop-blur border border-slate-700 rounded-lg px-2 py-1 shadow-xl z-10 pointer-events-auto">
+      {selectedItem && editable && menuBarPos && (
+        <div
+          ref={menuBarRef}
+          className="absolute flex items-center gap-0.5 bg-slate-900/95 backdrop-blur border border-slate-700 rounded-lg px-2 py-1 shadow-xl z-10 pointer-events-auto"
+          style={{
+            left: `${menuBarPos.left}px`,
+            top: `${menuBarPos.top}px`,
+            transform: 'translateX(-50%)',
+          }}
+        >
           <span className="text-xs text-slate-300 mr-2 max-w-[120px] truncate font-medium">{selectedItem.label || 'Item'}</span>
           <button onClick={() => onRotateItem?.(selectedItem.id, 'left')} className="p-1.5 hover:bg-slate-700 rounded transition-colors" title="Rotate left">
             <RotateCcw size={13} className="text-slate-300" />
