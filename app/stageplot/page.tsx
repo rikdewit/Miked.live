@@ -307,7 +307,7 @@ function DashboardPageInner() {
     const item = data.stagePlot.find(i => i.id === itemId)
     if (!item) return
     const cur = item.rotation || 0
-    const next = direction === 'right' ? cur - ROTATION_STEP : cur + ROTATION_STEP
+    const next = direction === 'right' ? cur + ROTATION_STEP : cur - ROTATION_STEP
     const norm = ((next % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2)
     updateStageItems(data.stagePlot.map(i => i.id === itemId ? { ...i, rotation: norm } : i))
   }, [data.stagePlot, updateStageItems])
