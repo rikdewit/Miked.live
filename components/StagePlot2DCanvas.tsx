@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useRef, useState, useCallback } from 'react';
-import { RotateCcw, RotateCw, Trash2, X } from 'lucide-react';
+import { RotateCcw, RotateCw, Trash2, X, Plus, Minus } from 'lucide-react';
 import { StageItem, BandMember } from '../types';
 import { STAGE_WIDTH, STAGE_DEPTH, getItemConfig } from '../utils/stageConfig';
 
@@ -69,13 +69,12 @@ function ItemShape({
     onClick: (e: React.MouseEvent) => e.stopPropagation(),
   };
 
-  // Person — circle with direction dot
+  // Person — single circle
   if (config.shape === 'person') {
     const r = Math.min(w, h) / 2;
     return (
       <g {...groupProps}>
         <circle cx={cx} cy={cy} r={r} fill={color} stroke={isSelected ? sel : 'rgba(0,0,0,0.4)'} strokeWidth={isSelected ? 2 : 1} />
-        <circle cx={cx} cy={cy - r * 0.5} r={r * 0.22} fill="rgba(0,0,0,0.4)" />
         <text x={cx} y={cy + r + 11} textAnchor="middle" fontSize={9} fill="#e2e8f0" fontFamily="system-ui,sans-serif" fontWeight="600" pointerEvents="none"
           transform={`rotate(${-rotDeg}, ${cx}, ${cy})`}>
           {shortLabel}
@@ -162,16 +161,53 @@ function ItemShape({
     );
   }
 
-  // Amp — dark rect + speaker circle
+  // Amp — guitar or bass amplifier (using SVG assets)
   if (label.toLowerCase().includes('amp')) {
+    const isBassAmp = label.toLowerCase().includes('bass');
+    const ampSvg = isBassAmp ? '/assets/BASS_AMP.svg' : '/assets/GUITAR_AMP.svg';
+    // SVG aspect ratio is 534:202, scale to fit within w x h
+    const svgAspect = 534 / 202;
+    const scaledW = Math.min(w, h * svgAspect);
+    const scaledH = scaledW / svgAspect;
+
     return (
       <g {...groupProps}>
-        <rect x={cx - w / 2} y={cy - h / 2} width={w} height={h} rx={3} fill="#1e293b" stroke={isSelected ? sel : '#334155'} strokeWidth={isSelected ? 2 : 1} />
-        <circle cx={cx} cy={cy} r={Math.min(w, h) * 0.32} fill="none" stroke="#475569" strokeWidth={1.5} />
-        <circle cx={cx} cy={cy} r={Math.min(w, h) * 0.12} fill="#334155" />
-        <text x={cx} y={cy + h / 2 + 11} textAnchor="middle" fontSize={8} fill="#64748b" fontFamily="system-ui" pointerEvents="none"
+        {/* SVG amp image - not clickable */}
+        <image
+          x={cx - scaledW / 2}
+          y={cy - scaledH / 2}
+          width={scaledW}
+          height={scaledH}
+          href={ampSvg}
+          pointerEvents="none"
+        />
+        {/* Invisible interactive rect for clicking/dragging */}
+        <rect
+          x={cx - scaledW / 2}
+          y={cy - scaledH / 2}
+          width={scaledW}
+          height={scaledH}
+          fill="transparent"
+          pointerEvents="auto"
+        />
+        {/* Selection border */}
+        {isSelected && (
+          <rect
+            x={cx - scaledW / 2 - 1}
+            y={cy - scaledH / 2 - 2}
+            width={scaledW + 2}
+            height={scaledH + 4}
+            rx={2}
+            fill="none"
+            stroke={sel}
+            strokeWidth={2}
+            strokeDasharray="4 2"
+          />
+        )}
+        {/* Label below */}
+        <text x={cx} y={cy + scaledH / 2 + 11} textAnchor="middle" fontSize={8} fill="#64748b" fontFamily="system-ui" pointerEvents="none"
           transform={`rotate(${-rotDeg}, ${cx}, ${cy})`}>
-          Amp
+          {shortLabel}
         </text>
       </g>
     );
@@ -179,10 +215,64 @@ function ItemShape({
 
   // Power strip
   if (item.type === 'power') {
+    const socketCount = item.quantity || 1;
+    const socketSize = Math.min(h, 40) * 0.75; // 25% smaller, square socket to maintain SVG aspect ratio
+    const totalStripW = socketCount * socketSize;
+    const stripStartX = cx - totalStripW / 2;
+    const scale = socketSize / 178; // SVG is 178x178
+
     return (
       <g {...groupProps}>
-        <rect x={cx - w / 2} y={cy - h / 2} width={w} height={h} rx={3} fill="#713f12" stroke={isSelected ? sel : '#854d0e'} strokeWidth={isSelected ? 2 : 1} />
-        <text x={cx} y={cy + 5} textAnchor="middle" fontSize={Math.min(w, h) * 0.55} fill="#fde68a" fontFamily="system-ui" pointerEvents="none">⚡</text>
+        {/* Render multiple sockets */}
+        {Array.from({ length: socketCount }, (_, i) => {
+          const socketX = stripStartX + i * socketSize;
+          return (
+            <g key={i} transform={`translate(${socketX}, ${cy - socketSize / 2}) scale(${scale})`}>
+              {/* White background with border */}
+              <rect x="2" y="2" width="174" height="174" rx="13" fill="white" stroke="black" strokeWidth="4"/>
+              {/* Large gray center circle */}
+              <circle cx="89.5" cy="88.5" r="65.5" fill="#D9D9D9" stroke="black" strokeWidth="4"/>
+              {/* Left socket hole */}
+              <circle cx="63" cy="89" r="9" fill="#949494" stroke="black" strokeWidth="4"/>
+              {/* Right socket hole */}
+              <circle cx="115" cy="89" r="9" fill="#949494" stroke="black" strokeWidth="4"/>
+              {/* Top ground pin */}
+              <mask id={`top-mask-${item.id}-${i}`} fill="white">
+                <rect x="83" y="22" width="12" height="12" rx="2"/>
+              </mask>
+              <rect x="83" y="22" width="12" height="12" rx="2" fill="#949494" stroke="black" strokeWidth="8" mask={`url(#top-mask-${item.id}-${i})`}/>
+              {/* Bottom ground pin */}
+              <mask id={`bottom-mask-${item.id}-${i}`} fill="white">
+                <rect x="83" y="143" width="12" height="12" rx="2"/>
+              </mask>
+              <rect x="83" y="143" width="12" height="12" rx="2" fill="#949494" stroke="black" strokeWidth="8" mask={`url(#bottom-mask-${item.id}-${i})`}/>
+            </g>
+          );
+        })}
+
+        {/* Invisible interactive rect for clicking/dragging - matches actual socket layout */}
+        <rect
+          x={stripStartX}
+          y={cy - socketSize / 2}
+          width={totalStripW}
+          height={socketSize}
+          fill="transparent"
+          pointerEvents="auto"
+        />
+        {/* Selection border */}
+        {isSelected && (
+          <rect
+            x={stripStartX - 2}
+            y={cy - socketSize / 2 - 2}
+            width={totalStripW + 4}
+            height={socketSize + 4}
+            rx={5}
+            fill="none"
+            stroke={sel}
+            strokeWidth={2}
+            strokeDasharray="4 2"
+          />
+        )}
       </g>
     );
   }
@@ -298,9 +388,21 @@ export const StagePlot2DCanvas: React.FC<StagePlot2DCanvasProps> = ({
     setSelectedId(null);
   }, [selectedId, items, setItems]);
 
+  const updateSocketCount = useCallback((delta: number) => {
+    if (!selectedId) return;
+    setItems(items.map(i => {
+      if (i.id === selectedId && i.type === 'power') {
+        const newQuantity = Math.max(1, (i.quantity || 1) + delta);
+        return { ...i, quantity: newQuantity };
+      }
+      return i;
+    }));
+  }, [selectedId, items, setItems]);
+
   const selectedItem = items.find(i => i.id === selectedId);
 
-  const selectionRing = selectedItem ? (() => {
+  // Selection ring (excluded for items with their own borders: amp, power, etc.)
+  const selectionRing = selectedItem && !['amp', 'power'].some(type => selectedItem.label?.toLowerCase().includes(type)) && selectedItem.type !== 'power' ? (() => {
     const config = getItemConfig(selectedItem);
     const cx = pctX(selectedItem.x);
     const cy = pctY(selectedItem.y);
@@ -369,6 +471,17 @@ export const StagePlot2DCanvas: React.FC<StagePlot2DCanvasProps> = ({
           <button onClick={() => onRotateItem?.(selectedItem.id, 'right')} className="p-1.5 hover:bg-slate-700 rounded transition-colors" title="Rotate right">
             <RotateCw size={13} className="text-slate-300" />
           </button>
+          {selectedItem.type === 'power' && (
+            <>
+              <div className="w-px h-4 bg-slate-700 mx-1" />
+              <button onClick={() => updateSocketCount(-1)} className="p-1.5 hover:bg-slate-700 rounded transition-colors" title="Remove socket">
+                <Minus size={13} className="text-slate-300" />
+              </button>
+              <button onClick={() => updateSocketCount(1)} className="p-1.5 hover:bg-slate-700 rounded transition-colors" title="Add socket">
+                <Plus size={13} className="text-slate-300" />
+              </button>
+            </>
+          )}
           <div className="w-px h-4 bg-slate-700 mx-1" />
           <button onClick={deleteSelected} className="p-1.5 hover:bg-red-900/50 rounded transition-colors" title="Delete">
             <Trash2 size={13} className="text-red-400" />
