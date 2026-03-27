@@ -108,27 +108,52 @@ export const Header: React.FC = () => {
   const handleExportPNG = useCallback(() => {
     const svg = document.querySelector<SVGSVGElement>('[data-export-svg]')
     if (!svg) return
-    const xml = new XMLSerializer().serializeToString(svg)
-    const blob = new Blob([xml], { type: 'image/svg+xml;charset=utf-8' })
-    const url = URL.createObjectURL(blob)
-    const img = new Image()
-    img.onload = () => {
-      const c = document.createElement('canvas')
-      c.width = 1600
-      c.height = 1000
-      const ctx = c.getContext('2d')
-      if (!ctx) return
-      ctx.drawImage(img, 0, 0, 1600, 1000)
-      URL.revokeObjectURL(url)
-      c.toBlob(b => {
-        if (!b) return
-        const a = document.createElement('a')
-        a.href = URL.createObjectURL(b)
-        a.download = `${data.details.bandName || 'stage-plot'}.png`
-        a.click()
-      })
-    }
-    img.src = url
+
+    // Fetch and embed all external SVG images as data URLs
+    const images = svg.querySelectorAll<SVGImageElement>('image')
+    const imagePromises = Array.from(images).map(imgEl => {
+      const href = imgEl.getAttribute('href') || imgEl.getAttributeNS('http://www.w3.org/1999/xlink', 'href')
+      if (!href) return Promise.resolve()
+
+      return fetch(href)
+        .then(res => res.blob())
+        .then(blob => new Promise<string>((resolve) => {
+          const reader = new FileReader()
+          reader.onload = () => resolve(reader.result as string)
+          reader.readAsDataURL(blob)
+        }))
+        .then(dataUrl => {
+          // Replace href with data URL
+          imgEl.setAttribute('href', dataUrl)
+        })
+        .catch(() => {
+          // If fetch fails, leave it as-is
+        })
+    })
+
+    Promise.all(imagePromises).then(() => {
+      const xml = new XMLSerializer().serializeToString(svg)
+      const blob = new Blob([xml], { type: 'image/svg+xml;charset=utf-8' })
+      const url = URL.createObjectURL(blob)
+      const img = new Image()
+      img.onload = () => {
+        const c = document.createElement('canvas')
+        c.width = 4800
+        c.height = 3000
+        const ctx = c.getContext('2d')
+        if (!ctx) return
+        ctx.drawImage(img, 0, 0, 4800, 3000)
+        URL.revokeObjectURL(url)
+        c.toBlob(b => {
+          if (!b) return
+          const a = document.createElement('a')
+          a.href = URL.createObjectURL(b)
+          a.download = `${data.details.bandName || 'stage-plot'}.png`
+          a.click()
+        })
+      }
+      img.src = url
+    })
   }, [data.details.bandName])
 
   // ── Stageplot save handler ─────────────────────────────────────────────
