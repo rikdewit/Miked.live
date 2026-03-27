@@ -135,10 +135,10 @@ function ItemShape({
     const r = Math.min(w, h) / 2;
     return (
       <g {...groupProps}>
-        <circle cx={cx} cy={cy} r={r} fill={color} stroke={isSelected ? sel : 'rgba(0,0,0,0.4)'} strokeWidth={isSelected ? 2 : 1} />
-        <text x={cx} y={cy + r + 11} textAnchor="middle" fontSize={9} fill="#e2e8f0" fontFamily="system-ui,sans-serif" fontWeight="600" pointerEvents="none"
+        <circle cx={cx} cy={cy} r={r} fill={color} stroke={isSelected ? sel : 'rgba(0,0,0,0.4)'} strokeWidth={isSelected ? 2 : 1} strokeDasharray={isSelected ? "5 2" : undefined} />
+        <text x={cx} y={cy + 4} textAnchor="middle" fontSize={8} fill="black" fontFamily="system-ui,sans-serif" fontWeight="600" pointerEvents="none"
           transform={`rotate(${-rotDeg}, ${cx}, ${cy})`}>
-          {shortLabel}
+          {label}
         </text>
       </g>
     );
@@ -504,8 +504,8 @@ function ItemShape({
   if (item.type === 'custom') {
     return (
       <g {...groupProps}>
-        <rect x={cx - w / 2} y={cy - h / 2} width={w} height={h} rx={3} fill="#312e81" stroke={isSelected ? sel : '#4338ca'} strokeWidth={isSelected ? 2 : 1} strokeDasharray="5 2" />
-        <text x={cx} y={cy + 4} textAnchor="middle" fontSize={9} fill="#a5b4fc" fontFamily="system-ui,sans-serif" fontWeight="600" pointerEvents="none"
+        <rect x={cx - w / 2} y={cy - h / 2} width={w} height={h} rx={3} fill="#D9D9D9" stroke={isSelected ? sel : 'black'} strokeWidth={isSelected ? 2 : 1} strokeDasharray={isSelected ? "5 2" : undefined} />
+        <text x={cx} y={cy + 4} textAnchor="middle" fontSize={9} fill="#1e293b" fontFamily="system-ui,sans-serif" fontWeight="600" pointerEvents="none"
           transform={`rotate(${-rotDeg}, ${cx}, ${cy})`}>
           {shortLabel}
         </text>
