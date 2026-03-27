@@ -6,7 +6,7 @@ import { Download, Loader2 } from 'lucide-react'
 import {
   Plus, Trash2, GripVertical, ChevronDown, ChevronUp,
   Check, RefreshCw, AlertTriangle,
-  Music2, X, Speaker, Mic2 as MicStand, Zap, Square, Tag, Waves
+  Music2, X, Speaker, Mic2 as MicStand, Zap, Square, Tag, Waves, Radio
 } from 'lucide-react'
 import { useStagePlot } from '@/providers/StagePlotProvider'
 import { INSTRUMENTS, INITIAL_RIDER_DATA } from '@/constants'
@@ -451,6 +451,7 @@ function DashboardPageInner() {
   const addLabel = () => updateStageItems([...data.stagePlot, { id: `lbl-${Date.now()}`, type: 'custom', x: 50, y: 50, label: 'Label', customWidth: 0, customDepth: 0 }])
   const addAmp = () => updateStageItems([...data.stagePlot, { id: `amp-${Date.now()}`, type: 'custom', x: 50, y: 50, label: 'Amp', customWidth: 1.3, customDepth: 0.65 }])
   const addBassAmp = () => updateStageItems([...data.stagePlot, { id: `bass-amp-${Date.now()}`, type: 'custom', x: 50, y: 50, label: 'Bass Amp', customWidth: 2.0, customDepth: 1.0 }])
+  const addDIBox = () => updateStageItems([...data.stagePlot, { id: `di-${Date.now()}`, type: 'custom', x: 50, y: 50, label: 'DI Box', customWidth: 0.4, customDepth: 0.6 }])
 
   // ── Render ────────────────────────────────────────────────────────────────
 
@@ -623,6 +624,7 @@ function DashboardPageInner() {
               { label: 'Mic Stand', icon: <MicStand size={12} />, action: addStand },
               { label: 'Amp', icon: <Waves size={12} />, action: addAmp },
               { label: 'Bass Amp', icon: <Waves size={12} />, action: addBassAmp },
+              { label: 'DI Box', icon: <Radio size={12} />, action: addDIBox },
               { label: 'Power', icon: <Zap size={12} />, action: addPower },
               { label: 'Custom', icon: <Square size={12} />, action: addCustom },
               { label: 'Label', icon: <Tag size={12} />, action: addLabel },

@@ -58,6 +58,13 @@ function getItemBoundingBox(
     return { halfW: sw / 2, halfH: sw / aspect / 2 };
   }
 
+  if (label.includes('di')) {
+    // DI_BOX.svg viewBox: 127×191
+    const aspect = 127 / 191;
+    const sw = Math.min(w, h * aspect) * 0.6;
+    return { halfW: sw / 2, halfH: sw / aspect / 2 };
+  }
+
   if (item.type === 'power') {
     const socketSize = Math.min(h, 40) * 0.75;
     return { halfW: ((item.quantity || 1) * socketSize) / 2, halfH: socketSize / 2 };
@@ -375,12 +382,40 @@ function ItemShape({
     );
   }
 
-  // DI box
+  // DI box — using SVG asset
   if (label.toLowerCase().includes('di')) {
+    const { halfW, halfH } = getItemBoundingBox(item, w, h);
     return (
       <g {...groupProps}>
-        <rect x={cx - w / 2} y={cy - h / 2} width={w} height={h} rx={2} fill="#7c2d12" stroke={isSelected ? sel : '#9a3412'} strokeWidth={isSelected ? 2 : 1} />
-        <text x={cx} y={cy + 4} textAnchor="middle" fontSize={7} fill="#fdba74" fontFamily="system-ui" fontWeight="700" pointerEvents="none">DI</text>
+        <image
+          x={cx - halfW}
+          y={cy - halfH}
+          width={halfW * 2}
+          height={halfH * 2}
+          href="/assets/DI BOX.svg"
+          pointerEvents="none"
+        />
+        <rect
+          x={cx - halfW}
+          y={cy - halfH}
+          width={halfW * 2}
+          height={halfH * 2}
+          fill="transparent"
+          pointerEvents="auto"
+        />
+        {isSelected && (
+          <rect
+            x={cx - halfW - 2}
+            y={cy - halfH - 2}
+            width={halfW * 2 + 4}
+            height={halfH * 2 + 4}
+            rx={2}
+            fill="none"
+            stroke={sel}
+            strokeWidth={2}
+            strokeDasharray="4 2"
+          />
+        )}
       </g>
     );
   }
