@@ -27,6 +27,46 @@ export const MEMBER_COLORS = [
   '#f87171', // red-400
 ];
 
+// Returns the half-width and half-height of the visual bounding box for each item type.
+// Uses the exact viewBox dimensions of each SVG asset so the hit area and selection
+// border always align with what's actually rendered.
+function getItemBoundingBox(
+  item: StageItem,
+  w: number,
+  h: number,
+): { halfW: number; halfH: number } {
+  const label = (item.label || '').toLowerCase();
+
+  if (item.type === 'monitor') {
+    // MONITOR.svg viewBox: 613×296
+    const aspect = 613 / 296;
+    const sw = Math.min(w, h * aspect) * 2.2;
+    return { halfW: sw / 2, halfH: sw / aspect / 2 };
+  }
+
+  if (label.includes('mic')) {
+    // MIC_STAND.svg viewBox: 317×482
+    const aspect = 317 / 482;
+    const sw = Math.min(w, h * aspect) * 5;
+    return { halfW: sw / 2, halfH: sw / aspect / 2 };
+  }
+
+  if (label.includes('amp')) {
+    // BASS_AMP.svg viewBox: 599×442  |  GUITAR_AMP.svg viewBox: 534×253
+    const aspect = label.includes('bass') ? 599 / 442 : 534 / 253;
+    const sw = Math.min(w, h * aspect) * 0.8;
+    return { halfW: sw / 2, halfH: sw / aspect / 2 };
+  }
+
+  if (item.type === 'power') {
+    const socketSize = Math.min(h, 40) * 0.75;
+    return { halfW: ((item.quantity || 1) * socketSize) / 2, halfH: socketSize / 2 };
+  }
+
+  // Default: use the item's allocated rect dimensions
+  return { halfW: w / 2, halfH: h / 2 };
+}
+
 function getMemberColor(item: StageItem, members: BandMember[]): string {
   if (!item.memberId) return '#6b7280';
   const idx = members.findIndex(m => m.id === item.memberId);
@@ -85,39 +125,31 @@ function ItemShape({
 
   // Monitor — using SVG asset
   if (item.type === 'monitor') {
-    const monitorSvg = '/assets/MONITOR.svg';
-    // SVG aspect ratio is 582:453
-    const svgAspect = 582 / 453;
-    const scaledW = Math.min(w, h * svgAspect) * 2.2; // Increased scale for better visibility
-    const scaledH = scaledW / svgAspect;
-
+    const { halfW, halfH } = getItemBoundingBox(item, w, h);
     return (
       <g {...groupProps}>
-        {/* SVG monitor image - not clickable */}
         <image
-          x={cx - scaledW / 2}
-          y={cy - scaledH / 2}
-          width={scaledW}
-          height={scaledH}
-          href={monitorSvg}
+          x={cx - halfW}
+          y={cy - halfH}
+          width={halfW * 2}
+          height={halfH * 2}
+          href="/assets/MONITOR.svg"
           pointerEvents="none"
         />
-        {/* Invisible interactive rect for clicking/dragging */}
         <rect
-          x={cx - scaledW / 2}
-          y={cy - scaledH / 2}
-          width={scaledW}
-          height={scaledH}
+          x={cx - halfW}
+          y={cy - halfH}
+          width={halfW * 2}
+          height={halfH * 2}
           fill="transparent"
           pointerEvents="auto"
         />
-        {/* Selection border */}
         {isSelected && (
           <rect
-            x={cx - scaledW / 2 - 1}
-            y={cy - scaledH / 2 - 2}
-            width={scaledW + 2}
-            height={scaledH + 4}
+            x={cx - halfW - 2}
+            y={cy - halfH - 2}
+            width={halfW * 2 + 4}
+            height={halfH * 2 + 4}
             rx={2}
             fill="none"
             stroke={sel}
@@ -125,8 +157,7 @@ function ItemShape({
             strokeDasharray="4 2"
           />
         )}
-        {/* Label below */}
-        <text x={cx} y={cy + scaledH / 2 + 11} textAnchor="middle" fontSize={8} fill="#64748b" fontFamily="system-ui" pointerEvents="none"
+        <text x={cx} y={cy + halfH + 11} textAnchor="middle" fontSize={8} fill="#64748b" fontFamily="system-ui" pointerEvents="none"
           transform={`rotate(${-rotDeg}, ${cx}, ${cy})`}>
           {item.monitorNumber ? `M${item.monitorNumber}` : 'Mon'}
         </text>
@@ -136,39 +167,31 @@ function ItemShape({
 
   // Mic stand — check first so it uses SVG asset
   if (label.toLowerCase().includes('mic') || (item.type === 'stand' && label.toLowerCase().includes('mic stand'))) {
-    const micStandSvg = '/assets/MIC_STAND.svg';
-    // SVG aspect ratio is 317:482
-    const svgAspect = 317 / 482;
-    const scaledW = Math.min(w, h * svgAspect) * 5; // 3x bigger
-    const scaledH = scaledW / svgAspect;
-
+    const { halfW, halfH } = getItemBoundingBox(item, w, h);
     return (
       <g {...groupProps}>
-        {/* SVG mic stand image - not clickable */}
         <image
-          x={cx - scaledW / 2}
-          y={cy - scaledH / 2}
-          width={scaledW}
-          height={scaledH}
-          href={micStandSvg}
+          x={cx - halfW}
+          y={cy - halfH}
+          width={halfW * 2}
+          height={halfH * 2}
+          href="/assets/MIC_STAND.svg"
           pointerEvents="none"
         />
-        {/* Invisible interactive rect for clicking/dragging */}
         <rect
-          x={cx - scaledW / 2}
-          y={cy - scaledH / 2}
-          width={scaledW}
-          height={scaledH}
+          x={cx - halfW}
+          y={cy - halfH}
+          width={halfW * 2}
+          height={halfH * 2}
           fill="transparent"
           pointerEvents="auto"
         />
-        {/* Selection border */}
         {isSelected && (
           <rect
-            x={cx - scaledW / 2 - 1}
-            y={cy - scaledH / 2 - 2}
-            width={scaledW + 2}
-            height={scaledH + 4}
+            x={cx - halfW - 2}
+            y={cy - halfH - 2}
+            width={halfW * 2 + 4}
+            height={halfH * 2 + 4}
             rx={2}
             fill="none"
             stroke={sel}
@@ -176,8 +199,7 @@ function ItemShape({
             strokeDasharray="4 2"
           />
         )}
-        {/* Label below */}
-        <text x={cx} y={cy + scaledH / 2 + 11} textAnchor="middle" fontSize={8} fill="#64748b" fontFamily="system-ui" pointerEvents="none"
+        <text x={cx} y={cy + halfH + 11} textAnchor="middle" fontSize={8} fill="#64748b" fontFamily="system-ui" pointerEvents="none"
           transform={`rotate(${-rotDeg}, ${cx}, ${cy})`}>
           {shortLabel}
         </text>
@@ -249,38 +271,31 @@ function ItemShape({
   if (label.toLowerCase().includes('amp')) {
     const isBassAmp = label.toLowerCase().includes('bass');
     const ampSvg = isBassAmp ? '/assets/BASS_AMP.svg' : '/assets/GUITAR_AMP.svg';
-    // SVG aspect ratio is 534:202, scale to fit within w x h
-    const svgAspect = 534 / 202;
-    const scaledW = Math.min(w, h * svgAspect);
-    const scaledH = scaledW / svgAspect;
-
+    const { halfW, halfH } = getItemBoundingBox(item, w, h);
     return (
       <g {...groupProps}>
-        {/* SVG amp image - not clickable */}
         <image
-          x={cx - scaledW / 2}
-          y={cy - scaledH / 2}
-          width={scaledW}
-          height={scaledH}
+          x={cx - halfW}
+          y={cy - halfH}
+          width={halfW * 2}
+          height={halfH * 2}
           href={ampSvg}
           pointerEvents="none"
         />
-        {/* Invisible interactive rect for clicking/dragging */}
         <rect
-          x={cx - scaledW / 2}
-          y={cy - scaledH / 2}
-          width={scaledW}
-          height={scaledH}
+          x={cx - halfW}
+          y={cy - halfH}
+          width={halfW * 2}
+          height={halfH * 2}
           fill="transparent"
           pointerEvents="auto"
         />
-        {/* Selection border */}
         {isSelected && (
           <rect
-            x={cx - scaledW / 2 - 1}
-            y={cy - scaledH / 2 - 2}
-            width={scaledW + 2}
-            height={scaledH + 4}
+            x={cx - halfW - 2}
+            y={cy - halfH - 2}
+            width={halfW * 2 + 4}
+            height={halfH * 2 + 4}
             rx={2}
             fill="none"
             stroke={sel}
@@ -288,8 +303,7 @@ function ItemShape({
             strokeDasharray="4 2"
           />
         )}
-        {/* Label below */}
-        <text x={cx} y={cy + scaledH / 2 + 11} textAnchor="middle" fontSize={8} fill="#64748b" fontFamily="system-ui" pointerEvents="none"
+        <text x={cx} y={cy + halfH + 11} textAnchor="middle" fontSize={8} fill="#64748b" fontFamily="system-ui" pointerEvents="none"
           transform={`rotate(${-rotDeg}, ${cx}, ${cy})`}>
           {shortLabel}
         </text>
