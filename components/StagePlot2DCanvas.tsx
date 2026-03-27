@@ -475,7 +475,7 @@ function ItemShape({
   }
 
   // Custom block — label inside, always upright
-  if (item.type === 'custom') {
+  if (item.type === 'custom' && item.shape !== 'circle') {
     const handleRadius = 3;
     const handleSize = 6;
     const handles = [
@@ -488,6 +488,48 @@ function ItemShape({
     return (
       <g {...groupProps}>
         <rect x={cx - w / 2} y={cy - h / 2} width={w} height={h} rx={3} fill="#D9D9D9" stroke={isSelected ? sel : 'black'} strokeWidth={isSelected ? 2 : 1} strokeDasharray={isSelected ? "5 2" : undefined} />
+        <text x={cx} y={cy + 4} textAnchor="middle" fontSize={9} fill="#1e293b" fontFamily="system-ui,sans-serif" fontWeight="600" pointerEvents="none"
+          transform={`rotate(${-rotDeg}, ${cx}, ${cy})`}>
+          {shortLabel}
+        </text>
+        {isSelected && editable && !isGhost && handles.map(({ corner, cx: hx, cy: hy, cursor: cur }) => (
+          <rect
+            key={`handle-${corner}`}
+            x={hx - handleRadius}
+            y={hy - handleRadius}
+            width={handleSize}
+            height={handleSize}
+            rx={1}
+            fill="white"
+            stroke={sel}
+            strokeWidth={1.5}
+            style={{ cursor: cur }}
+            pointerEvents="auto"
+            onPointerDown={(e) => {
+              e.stopPropagation();
+              onResizePointerDown?.(e, item, corner);
+            }}
+          />
+        ))}
+      </g>
+    );
+  }
+
+  // Custom circle — label inside, always upright
+  if (item.type === 'custom' && item.shape === 'circle') {
+    const handleRadius = 3;
+    const handleSize = 6;
+    const r = Math.min(w, h) / 2;
+    const handles = [
+      { corner: 'tl' as const, cx: cx - r, cy: cy - r, cursor: 'nwse-resize' },
+      { corner: 'tr' as const, cx: cx + r, cy: cy - r, cursor: 'nesw-resize' },
+      { corner: 'bl' as const, cx: cx - r, cy: cy + r, cursor: 'nesw-resize' },
+      { corner: 'br' as const, cx: cx + r, cy: cy + r, cursor: 'nwse-resize' },
+    ];
+
+    return (
+      <g {...groupProps}>
+        <circle cx={cx} cy={cy} r={r} fill="#D9D9D9" stroke={isSelected ? sel : 'black'} strokeWidth={isSelected ? 2 : 1} strokeDasharray={isSelected ? "5 2" : undefined} />
         <text x={cx} y={cy + 4} textAnchor="middle" fontSize={9} fill="#1e293b" fontFamily="system-ui,sans-serif" fontWeight="600" pointerEvents="none"
           transform={`rotate(${-rotDeg}, ${cx}, ${cy})`}>
           {shortLabel}
@@ -624,28 +666,49 @@ export const StagePlot2DCanvas: React.FC<StagePlot2DCanvasProps> = ({
       const fixedY = resizing.fixedCornerY;
       const minW = mW(0.2);
       const minH = mH(0.2);
+      const resizingItem = items.find(it => it.id === resizing.id);
+      const isCircle = resizingItem?.type === 'custom' && resizingItem?.shape === 'circle';
 
       // Constrain cursor position to respect minimum size
       let draggedX = x;
       let draggedY = y;
 
-      // Ensure minimum width constraint
-      if (draggedX < fixedX) {
-        draggedX = Math.min(draggedX, fixedX - minW);
-      } else {
-        draggedX = Math.max(draggedX, fixedX + minW);
-      }
+      if (isCircle) {
+        // For circles, use the maximum distance to maintain circular shape
+        const distX = Math.abs(draggedX - fixedX);
+        const distY = Math.abs(draggedY - fixedY);
+        const maxDist = Math.max(distX, distY);
+        const minDist = mW(0.2);
+        const constrainedDist = Math.max(maxDist, minDist);
 
-      // Ensure minimum height constraint
-      if (draggedY < fixedY) {
-        draggedY = Math.min(draggedY, fixedY - minH);
+        // Set dragged point to maintain circle shape
+        draggedX = draggedX < fixedX ? fixedX - constrainedDist : fixedX + constrainedDist;
+        draggedY = draggedY < fixedY ? fixedY - constrainedDist : fixedY + constrainedDist;
       } else {
-        draggedY = Math.max(draggedY, fixedY + minH);
+        // Ensure minimum width constraint
+        if (draggedX < fixedX) {
+          draggedX = Math.min(draggedX, fixedX - minW);
+        } else {
+          draggedX = Math.max(draggedX, fixedX + minW);
+        }
+
+        // Ensure minimum height constraint
+        if (draggedY < fixedY) {
+          draggedY = Math.min(draggedY, fixedY - minH);
+        } else {
+          draggedY = Math.max(draggedY, fixedY + minH);
+        }
       }
 
       // Calculate dimensions (always positive)
-      const newW = Math.abs(draggedX - fixedX);
-      const newH = Math.abs(draggedY - fixedY);
+      let newW = Math.abs(draggedX - fixedX);
+      let newH = Math.abs(draggedY - fixedY);
+
+      // For circles, ensure width equals height
+      if (isCircle) {
+        const size = Math.max(newW, newH);
+        newW = newH = size;
+      }
 
       // Calculate new center position
       const newCenterX = (fixedX + draggedX) / 2;

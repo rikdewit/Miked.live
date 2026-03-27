@@ -46,6 +46,7 @@ export interface StageItem {
   id: string;
   memberId?: string; // If linked to a band member
   type: 'member' | 'monitor' | 'power' | 'drumriser' | 'person' | 'stand' | 'custom';
+  shape?: 'block' | 'circle'; // For custom items: 'block' (default) or 'circle'
   customWidth?: number;  // meters, for custom blocks (undefined or 0 = label-only)
   customDepth?: number;  // meters, for custom blocks (undefined or 0 = label-only)
   customHeight?: number; // meters, for custom blocks (Y-axis height)

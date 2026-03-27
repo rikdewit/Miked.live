@@ -6,7 +6,7 @@ import { Download, Loader2 } from 'lucide-react'
 import {
   Plus, Trash2, GripVertical, ChevronDown, ChevronUp,
   Check, RefreshCw, AlertTriangle,
-  Music2, X, Speaker, Mic2 as MicStand, Zap, Square, Tag, Waves, Radio
+  Music2, X, Speaker, Mic2 as MicStand, Zap, Square, Tag, Waves, Radio, Circle
 } from 'lucide-react'
 import { useStagePlot } from '@/providers/StagePlotProvider'
 import { INSTRUMENTS, INITIAL_RIDER_DATA } from '@/constants'
@@ -448,6 +448,7 @@ function DashboardPageInner() {
   const addStand = () => updateStageItems([...data.stagePlot, { id: `stand-${Date.now()}`, type: 'stand', x: 50, y: 50, label: 'Mic Stand' }])
   const addPower = () => updateStageItems([...data.stagePlot, { id: `pwr-${Date.now()}`, type: 'power', x: 50, y: 50, label: 'Power', quantity: 1 }])
   const addCustom = () => updateStageItems([...data.stagePlot, { id: `custom-${Date.now()}`, type: 'custom', x: 50, y: 50, label: 'Custom', customWidth: 1.0, customDepth: 1.0 }])
+  const addCustomCircle = () => updateStageItems([...data.stagePlot, { id: `circle-${Date.now()}`, type: 'custom', shape: 'circle', x: 50, y: 50, label: 'Circle', customWidth: 1.0, customDepth: 1.0 }])
   const addLabel = () => updateStageItems([...data.stagePlot, { id: `lbl-${Date.now()}`, type: 'custom', x: 50, y: 50, label: 'Label', customWidth: 0, customDepth: 0 }])
   const addAmp = () => updateStageItems([...data.stagePlot, { id: `amp-${Date.now()}`, type: 'custom', x: 50, y: 50, label: 'Amp', customWidth: 1.3, customDepth: 0.65 }])
   const addBassAmp = () => updateStageItems([...data.stagePlot, { id: `bass-amp-${Date.now()}`, type: 'custom', x: 50, y: 50, label: 'Bass Amp', customWidth: 2.0, customDepth: 1.0 }])
@@ -631,6 +632,7 @@ function DashboardPageInner() {
               { label: 'DI Box', icon: <Radio size={12} />, action: addDIBox },
               { label: 'Power', icon: <Zap size={12} />, action: addPower },
               { label: 'Custom', icon: <Square size={12} />, action: addCustom },
+              { label: 'Circle', icon: <Circle size={12} />, action: addCustomCircle },
               { label: 'Label', icon: <Tag size={12} />, action: addLabel },
             ].map(({ label, icon, action }) => (
               <button
