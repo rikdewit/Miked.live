@@ -101,7 +101,58 @@ function ItemShape({
     );
   }
 
-  // Mic stand / pole — small circle
+  // Mic stand — check first so it uses SVG asset
+  if (label.toLowerCase().includes('mic') || (item.type === 'stand' && label.toLowerCase().includes('mic stand'))) {
+    const micStandSvg = '/assets/MIC_STAND.svg';
+    // SVG aspect ratio is 317:482
+    const svgAspect = 317 / 482;
+    const scaledW = Math.min(w, h * svgAspect) * 5; // 3x bigger
+    const scaledH = scaledW / svgAspect;
+
+    return (
+      <g {...groupProps}>
+        {/* SVG mic stand image - not clickable */}
+        <image
+          x={cx - scaledW / 2}
+          y={cy - scaledH / 2}
+          width={scaledW}
+          height={scaledH}
+          href={micStandSvg}
+          pointerEvents="none"
+        />
+        {/* Invisible interactive rect for clicking/dragging */}
+        <rect
+          x={cx - scaledW / 2}
+          y={cy - scaledH / 2}
+          width={scaledW}
+          height={scaledH}
+          fill="transparent"
+          pointerEvents="auto"
+        />
+        {/* Selection border */}
+        {isSelected && (
+          <rect
+            x={cx - scaledW / 2 - 1}
+            y={cy - scaledH / 2 - 2}
+            width={scaledW + 2}
+            height={scaledH + 4}
+            rx={2}
+            fill="none"
+            stroke={sel}
+            strokeWidth={2}
+            strokeDasharray="4 2"
+          />
+        )}
+        {/* Label below */}
+        <text x={cx} y={cy + scaledH / 2 + 11} textAnchor="middle" fontSize={8} fill="#64748b" fontFamily="system-ui" pointerEvents="none"
+          transform={`rotate(${-rotDeg}, ${cx}, ${cy})`}>
+          {shortLabel}
+        </text>
+      </g>
+    );
+  }
+
+  // Other poles — small circle (not mic stands)
   if (config.shape === 'pole' || item.type === 'stand') {
     const r = Math.min(w, h) / 2;
     return (
@@ -401,8 +452,8 @@ export const StagePlot2DCanvas: React.FC<StagePlot2DCanvasProps> = ({
 
   const selectedItem = items.find(i => i.id === selectedId);
 
-  // Selection ring (excluded for items with their own borders: amp, power, etc.)
-  const selectionRing = selectedItem && !['amp', 'power'].some(type => selectedItem.label?.toLowerCase().includes(type)) && selectedItem.type !== 'power' ? (() => {
+  // Selection ring (excluded for items with their own borders: amp, mic stand, power, etc.)
+  const selectionRing = selectedItem && !['amp', 'mic', 'stand', 'power'].some(type => selectedItem.label?.toLowerCase().includes(type)) && selectedItem.type !== 'power' ? (() => {
     const config = getItemConfig(selectedItem);
     const cx = pctX(selectedItem.x);
     const cy = pctY(selectedItem.y);
