@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useRef, useState, useCallback } from 'react';
-import { RotateCcw, RotateCw, Trash2, X, Plus, Minus, ArrowUp, ArrowDown } from 'lucide-react';
+import React, { useRef, useState, useCallback, useLayoutEffect } from 'react';
+import { RotateCcw, RotateCw, Trash2, X, Plus, Minus, ArrowUp, ArrowDown, Edit } from 'lucide-react';
 import { StageItem, BandMember } from '../types';
 import { STAGE_WIDTH, STAGE_DEPTH, getItemConfig } from '../utils/stageConfig';
 
@@ -80,7 +80,7 @@ function getItemBoundingBox(
   }
 
   if (item.type === 'power') {
-    const socketSize = Math.min(h, 40) * 0.75;
+    const socketSize = Math.min(h, 40) * 0.65;
     return { halfW: ((item.quantity || 1) * socketSize) / 2, halfH: socketSize / 2 };
   }
 
@@ -102,6 +102,8 @@ function ItemShape({
   editable,
   onPointerDown,
   onResizePointerDown,
+  labelDimensions,
+  labelTextRefsMap,
 }: {
   item: StageItem;
   members: BandMember[];
@@ -110,6 +112,8 @@ function ItemShape({
   editable: boolean;
   onPointerDown?: (e: React.PointerEvent, item: StageItem) => void;
   onResizePointerDown?: (e: React.PointerEvent, item: StageItem, corner: 'tl' | 'tr' | 'bl' | 'br') => void;
+  labelDimensions: Record<string, { width: number; height: number }>;
+  labelTextRefsMap: React.MutableRefObject<Map<string, SVGTextElement>>;
 }) {
   const config = getItemConfig(item);
   const cx = pctX(item.x);
@@ -227,17 +231,35 @@ function ItemShape({
     const r = Math.min(w, h) / 2;
     return (
       <g {...groupProps}>
-        <circle cx={cx} cy={cy} r={r} fill="#475569" stroke={isSelected ? sel : '#334155'} strokeWidth={isSelected ? 2 : 1} />
+        <circle cx={cx} cy={cy} r={r} fill="#475569" stroke={isSelected ? sel : '#334155'} strokeWidth={isSelected ? 2 : 1} strokeDasharray={isSelected ? "5 2" : undefined} />
       </g>
     );
   }
 
   // Label-only (zero-size custom)
   if (item.customWidth === 0 && item.customDepth === 0) {
+    const dims = labelDimensions[item.id];
+    const rectWidth = dims ? dims.width + 8 : 64;
+    const rectHeight = dims ? dims.height + 6 : 22;
+    const rectX = cx - rectWidth / 2;
+    const rectY = cy - rectHeight / 2;
+
     return (
       <g {...groupProps}>
-        <rect x={cx - 32} y={cy - 11} width={64} height={22} rx={3} fill="transparent" stroke={isSelected ? sel : 'transparent'} strokeWidth={1} />
-        <text x={cx} y={cy + 5} textAnchor="middle" fontSize={10} fill="#94a3b8" fontFamily="system-ui,sans-serif" fontWeight="600" pointerEvents="none">
+        <rect x={rectX} y={rectY} width={rectWidth} height={rectHeight} rx={3} fill="transparent" stroke={isSelected ? sel : 'transparent'} strokeWidth={isSelected ? 2 : 1} strokeDasharray={isSelected ? "5 2" : undefined} />
+        <text
+          ref={(el) => {
+            if (el) labelTextRefsMap.current.set(item.id, el);
+          }}
+          x={cx}
+          y={cy + 5}
+          textAnchor="middle"
+          fontSize={10}
+          fill="black"
+          fontFamily="system-ui,sans-serif"
+          fontWeight="600"
+          pointerEvents="none"
+        >
           {label}
         </text>
       </g>
@@ -286,7 +308,7 @@ function ItemShape({
   if (label.toLowerCase().includes('kit')) {
     return (
       <g {...groupProps}>
-        <rect x={cx - w / 2} y={cy - h / 2} width={w} height={h} rx={4} fill="#7f1d1d" stroke={isSelected ? sel : '#991b1b'} strokeWidth={isSelected ? 2 : 1} />
+        <rect x={cx - w / 2} y={cy - h / 2} width={w} height={h} rx={4} fill="#7f1d1d" stroke={isSelected ? sel : '#991b1b'} strokeWidth={isSelected ? 2 : 1} strokeDasharray={isSelected ? "5 2" : undefined} />
         <circle cx={cx} cy={cy + h * 0.1} r={Math.min(w, h) * 0.2} fill="none" stroke="#fca5a5" strokeWidth={1.5} />
         <circle cx={cx - w * 0.25} cy={cy - h * 0.15} r={Math.min(w, h) * 0.1} fill="none" stroke="#fca5a5" strokeWidth={1} />
         <circle cx={cx + w * 0.28} cy={cy + h * 0.15} r={Math.min(w, h) * 0.1} fill="none" stroke="#fca5a5" strokeWidth={1} />
@@ -569,6 +591,7 @@ function ItemShape({
         fill={config.color}
         stroke={isSelected ? sel : 'rgba(0,0,0,0.35)'}
         strokeWidth={isSelected ? 2 : 1}
+        strokeDasharray={isSelected ? "5 2" : undefined}
       />
     </g>
   );
@@ -607,9 +630,16 @@ export const StagePlot2DCanvas: React.FC<StagePlot2DCanvasProps> = ({
     fixedCornerY: number;
   } | null>(null);
   const [menuBarPos, setMenuBarPos] = useState<{ top: number; left: number } | null>(null);
+  const [editingLabel, setEditingLabel] = useState<string | null>(null);
+  const [labelEditText, setLabelEditText] = useState('');
+  const labelInputRef = useRef<HTMLInputElement>(null);
   const menuBarRef = useRef<HTMLDivElement>(null);
   const itemsRef = useRef(items);
   itemsRef.current = items;
+
+  // Store refs to label text elements and their measured dimensions
+  const labelTextRefsMap = useRef<Map<string, SVGTextElement>>(new Map());
+  const [labelDimensions, setLabelDimensions] = useState<Record<string, { width: number; height: number }>>({});
 
   const setSvgRef = useCallback((el: SVGSVGElement | null) => {
     (svgRef as React.MutableRefObject<SVGSVGElement | null>).current = el;
@@ -620,6 +650,25 @@ export const StagePlot2DCanvas: React.FC<StagePlot2DCanvasProps> = ({
   const selectedItemPos = items.find(i => i.id === selectedId);
   const selectedPosX = selectedItemPos?.x;
   const selectedPosY = selectedItemPos?.y;
+
+  // Measure label text dimensions using getBBox()
+  useLayoutEffect(() => {
+    const measured: Record<string, { width: number; height: number }> = {};
+    labelTextRefsMap.current.forEach((textEl, itemId) => {
+      try {
+        const bbox = textEl.getBBox();
+        measured[itemId] = {
+          width: bbox.width,
+          height: bbox.height,
+        };
+      } catch (e) {
+        // Element might not be rendered yet
+      }
+    });
+    if (Object.keys(measured).length > 0) {
+      setLabelDimensions(measured);
+    }
+  }, [items]);
 
   // Calculate menu bar position above selected item
   React.useEffect(() => {
@@ -686,7 +735,7 @@ export const StagePlot2DCanvas: React.FC<StagePlot2DCanvasProps> = ({
     // Scale bbox from SVG units to screen pixels
     const rotatedHalfHScreen = rotatedHalfH * (contentHeight / SVG_H);
 
-    const MENU_GAP = 10;
+    const MENU_GAP = 18;
     const menuBarHeight = menuBarRef.current?.offsetHeight ?? 34;
     const relativeLeft = svgOffsetX + contentOffsetX + itemPixelX;
     // Subtract menuBarHeight so the bottom edge of the menu is MENU_GAP above the item (symmetric with bottom)
@@ -852,6 +901,39 @@ export const StagePlot2DCanvas: React.FC<StagePlot2DCanvasProps> = ({
     }));
   }, [selectedId, items, setItems]);
 
+  const updateLabelInProgress = useCallback((newLabel: string) => {
+    if (!selectedId) return;
+    setLabelEditText(newLabel);
+    setItems(items.map(i => {
+      if (i.id === selectedId) {
+        return { ...i, label: newLabel };
+      }
+      return i;
+    }));
+  }, [selectedId, items, setItems]);
+
+  const saveLabel = useCallback((newLabel: string) => {
+    if (!selectedId) return;
+    setItems(items.map(i => {
+      if (i.id === selectedId) {
+        return { ...i, label: newLabel };
+      }
+      return i;
+    }));
+    setEditingLabel(null);
+    setLabelEditText('');
+  }, [selectedId, items, setItems]);
+
+  const startEditLabel = useCallback(() => {
+    const item = items.find(i => i.id === selectedId);
+    if (item) {
+      setEditingLabel(selectedId);
+      setLabelEditText(item.label || '');
+      // Focus input on next render
+      setTimeout(() => labelInputRef.current?.focus(), 0);
+    }
+  }, [selectedId, items]);
+
   const selectedItem = items.find(i => i.id === selectedId);
 
   // All items have their own selection borders drawn within ItemShape
@@ -891,12 +973,12 @@ export const StagePlot2DCanvas: React.FC<StagePlot2DCanvasProps> = ({
 
         {/* Ghost items */}
         {ghostItems.map(item => (
-          <ItemShape key={`ghost-${item.id}`} item={item} members={members} isGhost={true} isSelected={false} editable={false} />
+          <ItemShape key={`ghost-${item.id}`} item={item} members={members} isGhost={true} isSelected={false} editable={false} labelDimensions={labelDimensions} labelTextRefsMap={labelTextRefsMap} />
         ))}
 
         {/* Stage items */}
         {items.map(item => (
-          <ItemShape key={item.id} item={item} members={members} isGhost={false} isSelected={item.id === selectedId} editable={editable} onPointerDown={handleItemPointerDown} onResizePointerDown={handleResizePointerDown} />
+          <ItemShape key={item.id} item={item} members={members} isGhost={false} isSelected={item.id === selectedId} editable={editable} onPointerDown={handleItemPointerDown} onResizePointerDown={handleResizePointerDown} labelDimensions={labelDimensions} labelTextRefsMap={labelTextRefsMap} />
         ))}
 
         {selectionRing}
@@ -913,7 +995,38 @@ export const StagePlot2DCanvas: React.FC<StagePlot2DCanvasProps> = ({
             transform: 'translateX(-50%)',
           }}
         >
-          <span className="text-xs text-slate-300 mr-2 max-w-[120px] truncate font-medium">{selectedItem.label || 'Item'}</span>
+          {editingLabel === selectedItem.id ? (
+            <input
+              ref={labelInputRef}
+              type="text"
+              value={labelEditText}
+              onChange={(e) => updateLabelInProgress(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  saveLabel(labelEditText);
+                } else if (e.key === 'Escape') {
+                  setEditingLabel(null);
+                  setLabelEditText('');
+                }
+              }}
+              onBlur={() => {
+                if (labelEditText) {
+                  saveLabel(labelEditText);
+                } else {
+                  setEditingLabel(null);
+                }
+              }}
+              className="text-xs bg-slate-800 border border-slate-600 rounded px-2 py-0.5 text-slate-300 focus:outline-none focus:border-slate-500 max-w-[120px] mr-2"
+              autoFocus
+            />
+          ) : (
+            <>
+              <span className="text-xs text-slate-300 mr-2 max-w-[120px] truncate font-medium">{selectedItem.label || 'Item'}</span>
+              <button onClick={startEditLabel} className="p-1.5 hover:bg-slate-700 rounded transition-colors" title="Edit label">
+                <Edit size={13} className="text-slate-300" />
+              </button>
+            </>
+          )}
           <button onClick={() => onRotateItem?.(selectedItem.id, 'left')} className="p-1.5 hover:bg-slate-700 rounded transition-colors" title="Rotate left">
             <RotateCcw size={13} className="text-slate-300" />
           </button>
