@@ -228,6 +228,7 @@ function DashboardPageInner() {
     data, setData, updateStageItems,
     addMember, removeMember, updateMemberName,
     addMemberInstrument, updateMemberInstrument, removeMemberInstrument,
+    moveToFront, moveToBack,
     loadFromServer, isHydrated, viewMode, setViewMode, clearSaved,
   } = useStagePlot()
 
@@ -671,6 +672,8 @@ function DashboardPageInner() {
             ghostItems={ghostItems}
             members={data.members}
             onRotateItem={handleRotateItem}
+            onMoveToFront={moveToFront}
+            onMoveToBack={moveToBack}
           />
 
           {/* Empty state */}

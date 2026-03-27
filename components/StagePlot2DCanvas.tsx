@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useRef, useState, useCallback } from 'react';
-import { RotateCcw, RotateCw, Trash2, X, Plus, Minus } from 'lucide-react';
+import { RotateCcw, RotateCw, Trash2, X, Plus, Minus, ArrowUp, ArrowDown } from 'lucide-react';
 import { StageItem, BandMember } from '../types';
 import { STAGE_WIDTH, STAGE_DEPTH, getItemConfig } from '../utils/stageConfig';
 
@@ -581,6 +581,8 @@ export interface StagePlot2DCanvasProps {
   ghostItems?: StageItem[];
   members: BandMember[];
   onRotateItem?: (id: string, dir: 'left' | 'right') => void;
+  onMoveToFront?: (id: string) => void;
+  onMoveToBack?: (id: string) => void;
   exportRef?: React.RefObject<SVGSVGElement | null>;
 }
 
@@ -591,6 +593,8 @@ export const StagePlot2DCanvas: React.FC<StagePlot2DCanvasProps> = ({
   ghostItems = [],
   members,
   onRotateItem,
+  onMoveToFront,
+  onMoveToBack,
   exportRef,
 }) => {
   const svgRef = useRef<SVGSVGElement>(null);
@@ -927,6 +931,13 @@ export const StagePlot2DCanvas: React.FC<StagePlot2DCanvasProps> = ({
               </button>
             </>
           )}
+          <div className="w-px h-4 bg-slate-700 mx-1" />
+          <button onClick={() => onMoveToFront?.(selectedItem.id)} className="p-1.5 hover:bg-slate-700 rounded transition-colors" title="Bring to front">
+            <ArrowUp size={13} className="text-slate-300" />
+          </button>
+          <button onClick={() => onMoveToBack?.(selectedItem.id)} className="p-1.5 hover:bg-slate-700 rounded transition-colors" title="Send to back">
+            <ArrowDown size={13} className="text-slate-300" />
+          </button>
           <div className="w-px h-4 bg-slate-700 mx-1" />
           <button onClick={deleteSelected} className="p-1.5 hover:bg-red-900/50 rounded transition-colors" title="Delete">
             <Trash2 size={13} className="text-red-400" />

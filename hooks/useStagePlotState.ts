@@ -263,6 +263,28 @@ export const useStagePlotState = () => {
     }));
   }, []);
 
+  const moveToFront = useCallback((itemId: string) => {
+    setData(prev => {
+      const index = prev.stagePlot.findIndex(item => item.id === itemId);
+      if (index === -1 || index === prev.stagePlot.length - 1) return prev; // Already at front or not found
+      const item = prev.stagePlot[index];
+      const newStagePlot = prev.stagePlot.filter((_, i) => i !== index);
+      newStagePlot.push(item);
+      return { ...prev, stagePlot: newStagePlot };
+    });
+  }, []);
+
+  const moveToBack = useCallback((itemId: string) => {
+    setData(prev => {
+      const index = prev.stagePlot.findIndex(item => item.id === itemId);
+      if (index === -1 || index === 0) return prev; // Already at back or not found
+      const item = prev.stagePlot[index];
+      const newStagePlot = prev.stagePlot.filter((_, i) => i !== index);
+      newStagePlot.unshift(item);
+      return { ...prev, stagePlot: newStagePlot };
+    });
+  }, []);
+
   return {
     data,
     setData,
@@ -275,6 +297,8 @@ export const useStagePlotState = () => {
     removeMember,
     updateStageItems,
     updateInstrumentInputs,
+    moveToFront,
+    moveToBack,
     savedStageplotId: saveState.savedStageplotId,
     savedShareToken: saveState.savedShareToken,
     savedAt: saveState.savedAt,
