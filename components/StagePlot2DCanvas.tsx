@@ -178,10 +178,6 @@ function ItemShape({
             strokeDasharray="4 2"
           />
         )}
-        <text x={cx} y={cy + halfH + 11} textAnchor="middle" fontSize={8} fill="#64748b" fontFamily="system-ui" pointerEvents="none"
-          transform={`rotate(${-rotDeg}, ${cx}, ${cy})`}>
-          {item.monitorNumber ? `M${item.monitorNumber}` : 'Mon'}
-        </text>
       </g>
     );
   }
@@ -220,10 +216,6 @@ function ItemShape({
             strokeDasharray="4 2"
           />
         )}
-        <text x={cx} y={cy + halfH + 11} textAnchor="middle" fontSize={8} fill="#64748b" fontFamily="system-ui" pointerEvents="none"
-          transform={`rotate(${-rotDeg}, ${cx}, ${cy})`}>
-          {shortLabel}
-        </text>
       </g>
     );
   }
@@ -234,10 +226,6 @@ function ItemShape({
     return (
       <g {...groupProps}>
         <circle cx={cx} cy={cy} r={r} fill="#475569" stroke={isSelected ? sel : '#334155'} strokeWidth={isSelected ? 2 : 1} />
-        <text x={cx} y={cy + r + 11} textAnchor="middle" fontSize={8} fill="#64748b" fontFamily="system-ui" pointerEvents="none"
-          transform={`rotate(${-rotDeg}, ${cx}, ${cy})`}>
-          Stand
-        </text>
       </g>
     );
   }
@@ -288,10 +276,6 @@ function ItemShape({
             strokeDasharray="4 2"
           />
         )}
-        <text x={cx} y={cy + halfH + 11} textAnchor="middle" fontSize={8} fill="#64748b" fontFamily="system-ui" pointerEvents="none"
-          transform={`rotate(${-rotDeg}, ${cx}, ${cy})`}>
-          {shortLabel}
-        </text>
       </g>
     );
   }
@@ -304,10 +288,6 @@ function ItemShape({
         <circle cx={cx} cy={cy + h * 0.1} r={Math.min(w, h) * 0.2} fill="none" stroke="#fca5a5" strokeWidth={1.5} />
         <circle cx={cx - w * 0.25} cy={cy - h * 0.15} r={Math.min(w, h) * 0.1} fill="none" stroke="#fca5a5" strokeWidth={1} />
         <circle cx={cx + w * 0.28} cy={cy + h * 0.15} r={Math.min(w, h) * 0.1} fill="none" stroke="#fca5a5" strokeWidth={1} />
-        <text x={cx} y={cy - h / 2 - 5} textAnchor="middle" fontSize={9} fill="#fca5a5" fontFamily="system-ui" fontWeight="600" pointerEvents="none"
-          transform={`rotate(${-rotDeg}, ${cx}, ${cy})`}>
-          {shortLabel}
-        </text>
       </g>
     );
   }
@@ -346,10 +326,6 @@ function ItemShape({
             strokeDasharray="4 2"
           />
         )}
-        <text x={cx} y={cy + halfH + 11} textAnchor="middle" fontSize={8} fill="#64748b" fontFamily="system-ui" pointerEvents="none"
-          transform={`rotate(${-rotDeg}, ${cx}, ${cy})`}>
-          {shortLabel}
-        </text>
       </g>
     );
   }
@@ -390,10 +366,6 @@ function ItemShape({
             strokeDasharray="4 2"
           />
         )}
-        <text x={cx} y={cy + halfH + 11} textAnchor="middle" fontSize={8} fill="#64748b" fontFamily="system-ui" pointerEvents="none"
-          transform={`rotate(${-rotDeg}, ${cx}, ${cy})`}>
-          {shortLabel}
-        </text>
       </g>
     );
   }
@@ -513,7 +485,7 @@ function ItemShape({
     );
   }
 
-  // Default rect (instruments, pedals, etc.) — label below, always upright
+  // Default rect (instruments, pedals, etc.)
   return (
     <g {...groupProps}>
       <rect
@@ -526,10 +498,6 @@ function ItemShape({
         stroke={isSelected ? sel : 'rgba(0,0,0,0.35)'}
         strokeWidth={isSelected ? 2 : 1}
       />
-      <text x={cx} y={cy + h / 2 + 11} textAnchor="middle" fontSize={8} fill="#94a3b8" fontFamily="system-ui" pointerEvents="none"
-        transform={`rotate(${-rotDeg}, ${cx}, ${cy})`}>
-        {shortLabel}
-      </text>
     </g>
   );
 }
