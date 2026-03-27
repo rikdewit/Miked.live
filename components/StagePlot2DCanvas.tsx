@@ -65,6 +65,20 @@ function getItemBoundingBox(
     return { halfW: sw / 2, halfH: sw / aspect / 2 };
   }
 
+  if (label.toLowerCase().includes('keys')) {
+    // KEYS.svg viewBox: 782×207
+    const aspect = 782 / 207;
+    const sw = Math.min(w, h * aspect) * .8;
+    return { halfW: sw / 2, halfH: sw / aspect / 2 };
+  }
+
+  if (label.toLowerCase().includes('drum')) {
+    // DRUM KIT.svg viewBox: 825×474
+    const aspect = 825 / 474;
+    const sw = Math.min(w, h * aspect) * 1;
+    return { halfW: sw / 2, halfH: sw / aspect / 2 };
+  }
+
   if (item.type === 'power') {
     const socketSize = Math.min(h, 40) * 0.75;
     return { halfW: ((item.quantity || 1) * socketSize) / 2, halfH: socketSize / 2 };
@@ -240,8 +254,50 @@ function ItemShape({
     );
   }
 
-  // Drum kit — red rect + inner circles
-  if (label.toLowerCase().includes('drum') || label.toLowerCase().includes('kit')) {
+  // Drum Kit — using SVG asset (checked before generic drum shape)
+  if (label.toLowerCase().includes('drum')) {
+    const { halfW, halfH } = getItemBoundingBox(item, w, h);
+    return (
+      <g {...groupProps}>
+        <image
+          x={cx - halfW}
+          y={cy - halfH}
+          width={halfW * 2}
+          height={halfH * 2}
+          href="/assets/DRUM KIT.svg"
+          pointerEvents="none"
+        />
+        <rect
+          x={cx - halfW}
+          y={cy - halfH}
+          width={halfW * 2}
+          height={halfH * 2}
+          fill="transparent"
+          pointerEvents="auto"
+        />
+        {isSelected && (
+          <rect
+            x={cx - halfW - 2}
+            y={cy - halfH - 2}
+            width={halfW * 2 + 4}
+            height={halfH * 2 + 4}
+            rx={2}
+            fill="none"
+            stroke={sel}
+            strokeWidth={2}
+            strokeDasharray="4 2"
+          />
+        )}
+        <text x={cx} y={cy + halfH + 11} textAnchor="middle" fontSize={8} fill="#64748b" fontFamily="system-ui" pointerEvents="none"
+          transform={`rotate(${-rotDeg}, ${cx}, ${cy})`}>
+          {shortLabel}
+        </text>
+      </g>
+    );
+  }
+
+  // Drum kit — red rect + inner circles (fallback for non-SVG drum items)
+  if (label.toLowerCase().includes('kit')) {
     return (
       <g {...groupProps}>
         <rect x={cx - w / 2} y={cy - h / 2} width={w} height={h} rx={4} fill="#7f1d1d" stroke={isSelected ? sel : '#991b1b'} strokeWidth={isSelected ? 2 : 1} />
@@ -256,17 +312,41 @@ function ItemShape({
     );
   }
 
-  // Keys / Synth — purple rect + key lines
-  if (label.toLowerCase().includes('keys') || label.toLowerCase().includes('synth')) {
-    const keyCount = 8;
-    const keyW = (w - 4) / keyCount;
+  // Keys — using SVG asset
+  if (label.toLowerCase().includes('keys')) {
+    const { halfW, halfH } = getItemBoundingBox(item, w, h);
     return (
       <g {...groupProps}>
-        <rect x={cx - w / 2} y={cy - h / 2} width={w} height={h} rx={3} fill="#4c1d95" stroke={isSelected ? sel : '#5b21b6'} strokeWidth={isSelected ? 2 : 1} />
-        {Array.from({ length: keyCount - 1 }, (_, i) => (
-          <line key={i} x1={cx - w / 2 + (i + 1) * keyW + 2} y1={cy - h / 2 + 3} x2={cx - w / 2 + (i + 1) * keyW + 2} y2={cy + h / 2 - 3} stroke="#7c3aed" strokeWidth={0.8} />
-        ))}
-        <text x={cx} y={cy + h / 2 + 11} textAnchor="middle" fontSize={9} fill="#a78bfa" fontFamily="system-ui" pointerEvents="none"
+        <image
+          x={cx - halfW}
+          y={cy - halfH}
+          width={halfW * 2}
+          height={halfH * 2}
+          href="/assets/KEYS.svg"
+          pointerEvents="none"
+        />
+        <rect
+          x={cx - halfW}
+          y={cy - halfH}
+          width={halfW * 2}
+          height={halfH * 2}
+          fill="transparent"
+          pointerEvents="auto"
+        />
+        {isSelected && (
+          <rect
+            x={cx - halfW - 2}
+            y={cy - halfH - 2}
+            width={halfW * 2 + 4}
+            height={halfH * 2 + 4}
+            rx={2}
+            fill="none"
+            stroke={sel}
+            strokeWidth={2}
+            strokeDasharray="4 2"
+          />
+        )}
+        <text x={cx} y={cy + halfH + 11} textAnchor="middle" fontSize={8} fill="#64748b" fontFamily="system-ui" pointerEvents="none"
           transform={`rotate(${-rotDeg}, ${cx}, ${cy})`}>
           {shortLabel}
         </text>

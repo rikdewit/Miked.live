@@ -452,6 +452,8 @@ function DashboardPageInner() {
   const addAmp = () => updateStageItems([...data.stagePlot, { id: `amp-${Date.now()}`, type: 'custom', x: 50, y: 50, label: 'Amp', customWidth: 1.3, customDepth: 0.65 }])
   const addBassAmp = () => updateStageItems([...data.stagePlot, { id: `bass-amp-${Date.now()}`, type: 'custom', x: 50, y: 50, label: 'Bass Amp', customWidth: 2.0, customDepth: 1.0 }])
   const addDIBox = () => updateStageItems([...data.stagePlot, { id: `di-${Date.now()}`, type: 'custom', x: 50, y: 50, label: 'DI Box', customWidth: 0.4, customDepth: 0.6 }])
+  const addKeys = () => updateStageItems([...data.stagePlot, { id: `keys-${Date.now()}`, type: 'custom', x: 50, y: 50, label: 'Keys', customWidth: 2.4, customDepth: 0.63 }])
+  const addDrumKit = () => updateStageItems([...data.stagePlot, { id: `drums-${Date.now()}`, type: 'custom', x: 50, y: 50, label: 'Drum Kit', customWidth: 2.5, customDepth: 1.2 }])
 
   // ── Render ────────────────────────────────────────────────────────────────
 
@@ -624,6 +626,8 @@ function DashboardPageInner() {
               { label: 'Mic Stand', icon: <MicStand size={12} />, action: addStand },
               { label: 'Amp', icon: <Waves size={12} />, action: addAmp },
               { label: 'Bass Amp', icon: <Waves size={12} />, action: addBassAmp },
+              { label: 'Keys', icon: <Music2 size={12} />, action: addKeys },
+              { label: 'Drums', icon: <Music2 size={12} />, action: addDrumKit },
               { label: 'DI Box', icon: <Radio size={12} />, action: addDIBox },
               { label: 'Power', icon: <Zap size={12} />, action: addPower },
               { label: 'Custom', icon: <Square size={12} />, action: addCustom },
