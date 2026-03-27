@@ -83,17 +83,50 @@ function ItemShape({
     );
   }
 
-  // Monitor — wedge wider at top (speaker face toward performer/back of stage)
+  // Monitor — using SVG asset
   if (item.type === 'monitor') {
-    const hw = w / 2;
-    const hh = h / 2;
-    // Wider at top (facing performer), narrower at bottom (toward audience)
-    const pts = `${cx - hw},${cy - hh} ${cx + hw},${cy - hh} ${cx + hw * 0.55},${cy + hh} ${cx - hw * 0.55},${cy + hh}`;
+    const monitorSvg = '/assets/MONITOR.svg';
+    // SVG aspect ratio is 582:453
+    const svgAspect = 582 / 453;
+    const scaledW = Math.min(w, h * svgAspect) * 2.2; // Increased scale for better visibility
+    const scaledH = scaledW / svgAspect;
+
     return (
       <g {...groupProps}>
-        <polygon points={pts} fill="#374151" stroke={isSelected ? sel : '#4b5563'} strokeWidth={isSelected ? 2 : 1} />
-        {/* Counter-rotate label so it stays upright regardless of item rotation */}
-        <text x={cx} y={cy + 4} textAnchor="middle" fontSize={8} fill="#9ca3af" fontFamily="system-ui" pointerEvents="none"
+        {/* SVG monitor image - not clickable */}
+        <image
+          x={cx - scaledW / 2}
+          y={cy - scaledH / 2}
+          width={scaledW}
+          height={scaledH}
+          href={monitorSvg}
+          pointerEvents="none"
+        />
+        {/* Invisible interactive rect for clicking/dragging */}
+        <rect
+          x={cx - scaledW / 2}
+          y={cy - scaledH / 2}
+          width={scaledW}
+          height={scaledH}
+          fill="transparent"
+          pointerEvents="auto"
+        />
+        {/* Selection border */}
+        {isSelected && (
+          <rect
+            x={cx - scaledW / 2 - 1}
+            y={cy - scaledH / 2 - 2}
+            width={scaledW + 2}
+            height={scaledH + 4}
+            rx={2}
+            fill="none"
+            stroke={sel}
+            strokeWidth={2}
+            strokeDasharray="4 2"
+          />
+        )}
+        {/* Label below */}
+        <text x={cx} y={cy + scaledH / 2 + 11} textAnchor="middle" fontSize={8} fill="#64748b" fontFamily="system-ui" pointerEvents="none"
           transform={`rotate(${-rotDeg}, ${cx}, ${cy})`}>
           {item.monitorNumber ? `M${item.monitorNumber}` : 'Mon'}
         </text>
@@ -452,20 +485,8 @@ export const StagePlot2DCanvas: React.FC<StagePlot2DCanvasProps> = ({
 
   const selectedItem = items.find(i => i.id === selectedId);
 
-  // Selection ring (excluded for items with their own borders: amp, mic stand, power, etc.)
-  const selectionRing = selectedItem && !['amp', 'mic', 'stand', 'power'].some(type => selectedItem.label?.toLowerCase().includes(type)) && selectedItem.type !== 'power' ? (() => {
-    const config = getItemConfig(selectedItem);
-    const cx = pctX(selectedItem.x);
-    const cy = pctY(selectedItem.y);
-    const w = Math.max(mW(config.width), 16) + 10;
-    const h = Math.max(mH(config.depth), 12) + 10;
-    const rot = ((selectedItem.rotation || 0) * 180) / Math.PI;
-    if (config.shape === 'person') {
-      const r = Math.min(w, h) / 2;
-      return <circle cx={cx} cy={cy} r={r} fill="none" stroke="#818cf8" strokeWidth={1.5} strokeDasharray="4 2" transform={`rotate(${rot}, ${cx}, ${cy})`} pointerEvents="none" />;
-    }
-    return <rect x={cx - w / 2} y={cy - h / 2} width={w} height={h} rx={5} fill="none" stroke="#818cf8" strokeWidth={1.5} strokeDasharray="4 2" transform={`rotate(${rot}, ${cx}, ${cy})`} pointerEvents="none" />;
-  })() : null;
+  // All items have their own selection borders drawn within ItemShape
+  const selectionRing = null;
 
   return (
     <div className="relative w-full h-full select-none">
