@@ -429,22 +429,22 @@ export const StagePlot2DCanvas: React.FC<StagePlot2DCanvasProps> = ({
         style={{ touchAction: 'none' }}
       >
         {/* Stage floor */}
-        <rect x={0} y={0} width={SVG_W} height={SVG_H} fill="#0f172a" />
-        <rect x={0} y={0} width={SVG_W} height={SVG_H - 44} fill="#1e293b" />
+        <rect x={0} y={0} width={SVG_W} height={SVG_H} fill="white" />
+        <rect x={0} y={0} width={SVG_W} height={SVG_H - 44} fill="white" />
 
         {/* 1m grid */}
         {[100, 200, 300, 400, 500, 600, 700].map(x => (
-          <line key={`v${x}`} x1={x} y1={0} x2={x} y2={SVG_H - 44} stroke="#293548" strokeWidth={0.75} />
+          <line key={`v${x}`} x1={x} y1={0} x2={x} y2={SVG_H - 44} stroke="#e5e7eb" strokeWidth={0.75} />
         ))}
         {[100, 200, 300, 400].map(y => (
-          <line key={`h${y}`} x1={0} y1={y} x2={SVG_W} y2={y} stroke="#293548" strokeWidth={0.75} />
+          <line key={`h${y}`} x1={0} y1={y} x2={SVG_W} y2={y} stroke="#e5e7eb" strokeWidth={0.75} />
         ))}
 
         {/* Stage edge */}
-        <line x1={0} y1={SVG_H - 44} x2={SVG_W} y2={SVG_H - 44} stroke="#334155" strokeWidth={1.5} strokeDasharray="8 5" />
+        <line x1={0} y1={SVG_H - 44} x2={SVG_W} y2={SVG_H - 44} stroke="#4b5563" strokeWidth={1.5} />
 
         {/* Labels */}
-        <text x={SVG_W / 2} y={SVG_H - 16} textAnchor="middle" fontSize={10} fill="#334155" fontFamily="system-ui,sans-serif" letterSpacing={5} fontWeight={600}>
+        <text x={SVG_W / 2} y={SVG_H - 16} textAnchor="middle" fontSize={10} fill="#4b5563" fontFamily="system-ui,sans-serif" letterSpacing={5} fontWeight={600}>
           AUDIENCE
         </text>
 
