@@ -101,7 +101,58 @@ function ItemShape({
     );
   }
 
-  // Mic stand / pole — small circle
+  // Mic stand — check first so it uses SVG asset
+  if (label.toLowerCase().includes('mic') || (item.type === 'stand' && label.toLowerCase().includes('mic stand'))) {
+    const micStandSvg = '/assets/MIC_STAND.svg';
+    // SVG aspect ratio is 317:482
+    const svgAspect = 317 / 482;
+    const scaledW = Math.min(w, h * svgAspect) * 5; // 3x bigger
+    const scaledH = scaledW / svgAspect;
+
+    return (
+      <g {...groupProps}>
+        {/* SVG mic stand image - not clickable */}
+        <image
+          x={cx - scaledW / 2}
+          y={cy - scaledH / 2}
+          width={scaledW}
+          height={scaledH}
+          href={micStandSvg}
+          pointerEvents="none"
+        />
+        {/* Invisible interactive rect for clicking/dragging */}
+        <rect
+          x={cx - scaledW / 2}
+          y={cy - scaledH / 2}
+          width={scaledW}
+          height={scaledH}
+          fill="transparent"
+          pointerEvents="auto"
+        />
+        {/* Selection border */}
+        {isSelected && (
+          <rect
+            x={cx - scaledW / 2 - 1}
+            y={cy - scaledH / 2 - 2}
+            width={scaledW + 2}
+            height={scaledH + 4}
+            rx={2}
+            fill="none"
+            stroke={sel}
+            strokeWidth={2}
+            strokeDasharray="4 2"
+          />
+        )}
+        {/* Label below */}
+        <text x={cx} y={cy + scaledH / 2 + 11} textAnchor="middle" fontSize={8} fill="#64748b" fontFamily="system-ui" pointerEvents="none"
+          transform={`rotate(${-rotDeg}, ${cx}, ${cy})`}>
+          {shortLabel}
+        </text>
+      </g>
+    );
+  }
+
+  // Other poles — small circle (not mic stands)
   if (config.shape === 'pole' || item.type === 'stand') {
     const r = Math.min(w, h) / 2;
     return (
@@ -401,8 +452,8 @@ export const StagePlot2DCanvas: React.FC<StagePlot2DCanvasProps> = ({
 
   const selectedItem = items.find(i => i.id === selectedId);
 
-  // Selection ring (excluded for items with their own borders: amp, power, etc.)
-  const selectionRing = selectedItem && !['amp', 'power'].some(type => selectedItem.label?.toLowerCase().includes(type)) && selectedItem.type !== 'power' ? (() => {
+  // Selection ring (excluded for items with their own borders: amp, mic stand, power, etc.)
+  const selectionRing = selectedItem && !['amp', 'mic', 'stand', 'power'].some(type => selectedItem.label?.toLowerCase().includes(type)) && selectedItem.type !== 'power' ? (() => {
     const config = getItemConfig(selectedItem);
     const cx = pctX(selectedItem.x);
     const cy = pctY(selectedItem.y);
@@ -430,21 +481,21 @@ export const StagePlot2DCanvas: React.FC<StagePlot2DCanvasProps> = ({
       >
         {/* Stage floor */}
         <rect x={0} y={0} width={SVG_W} height={SVG_H} fill="white" />
-        <rect x={0} y={0} width={SVG_W} height={SVG_H - 44} fill="white" />
+        <rect x={0} y={0} width={SVG_W} height={400} fill="white" />
 
         {/* 1m grid */}
         {[100, 200, 300, 400, 500, 600, 700].map(x => (
-          <line key={`v${x}`} x1={x} y1={0} x2={x} y2={SVG_H - 44} stroke="#e5e7eb" strokeWidth={0.75} />
+          <line key={`v${x}`} x1={x} y1={0} x2={x} y2={400} stroke="#e5e7eb" strokeWidth={0.75} />
         ))}
         {[100, 200, 300, 400].map(y => (
           <line key={`h${y}`} x1={0} y1={y} x2={SVG_W} y2={y} stroke="#e5e7eb" strokeWidth={0.75} />
         ))}
 
         {/* Stage edge */}
-        <line x1={0} y1={SVG_H - 44} x2={SVG_W} y2={SVG_H - 44} stroke="#4b5563" strokeWidth={1.5} />
+        <line x1={0} y1={400} x2={SVG_W} y2={400} stroke="#4b5563" strokeWidth={1.5} />
 
         {/* Labels */}
-        <text x={SVG_W / 2} y={SVG_H - 16} textAnchor="middle" fontSize={10} fill="#4b5563" fontFamily="system-ui,sans-serif" letterSpacing={5} fontWeight={600}>
+        <text x={SVG_W / 2} y={450} textAnchor="middle" fontSize={10} fill="#4b5563" fontFamily="system-ui,sans-serif" letterSpacing={5} fontWeight={600}>
           AUDIENCE
         </text>
 
