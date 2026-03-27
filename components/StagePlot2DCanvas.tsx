@@ -101,6 +101,7 @@ function ItemShape({
   isSelected,
   editable,
   onPointerDown,
+  onResizePointerDown,
 }: {
   item: StageItem;
   members: BandMember[];
@@ -108,6 +109,7 @@ function ItemShape({
   isSelected: boolean;
   editable: boolean;
   onPointerDown?: (e: React.PointerEvent, item: StageItem) => void;
+  onResizePointerDown?: (e: React.PointerEvent, item: StageItem, corner: 'tl' | 'tr' | 'bl' | 'br') => void;
 }) {
   const config = getItemConfig(item);
   const cx = pctX(item.x);
@@ -474,6 +476,15 @@ function ItemShape({
 
   // Custom block — label inside, always upright
   if (item.type === 'custom') {
+    const handleRadius = 3;
+    const handleSize = 6;
+    const handles = [
+      { corner: 'tl' as const, cx: cx - w / 2, cy: cy - h / 2, cursor: 'nwse-resize' },
+      { corner: 'tr' as const, cx: cx + w / 2, cy: cy - h / 2, cursor: 'nesw-resize' },
+      { corner: 'bl' as const, cx: cx - w / 2, cy: cy + h / 2, cursor: 'nesw-resize' },
+      { corner: 'br' as const, cx: cx + w / 2, cy: cy + h / 2, cursor: 'nwse-resize' },
+    ];
+
     return (
       <g {...groupProps}>
         <rect x={cx - w / 2} y={cy - h / 2} width={w} height={h} rx={3} fill="#D9D9D9" stroke={isSelected ? sel : 'black'} strokeWidth={isSelected ? 2 : 1} strokeDasharray={isSelected ? "5 2" : undefined} />
@@ -481,6 +492,25 @@ function ItemShape({
           transform={`rotate(${-rotDeg}, ${cx}, ${cy})`}>
           {shortLabel}
         </text>
+        {isSelected && editable && !isGhost && handles.map(({ corner, cx: hx, cy: hy, cursor: cur }) => (
+          <rect
+            key={`handle-${corner}`}
+            x={hx - handleRadius}
+            y={hy - handleRadius}
+            width={handleSize}
+            height={handleSize}
+            rx={1}
+            fill="white"
+            stroke={sel}
+            strokeWidth={1.5}
+            style={{ cursor: cur }}
+            pointerEvents="auto"
+            onPointerDown={(e) => {
+              e.stopPropagation();
+              onResizePointerDown?.(e, item, corner);
+            }}
+          />
+        ))}
       </g>
     );
   }
@@ -524,6 +554,12 @@ export const StagePlot2DCanvas: React.FC<StagePlot2DCanvasProps> = ({
   const svgRef = useRef<SVGSVGElement>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [dragging, setDragging] = useState<{ id: string; offsetX: number; offsetY: number } | null>(null);
+  const [resizing, setResizing] = useState<{
+    id: string;
+    corner: 'tl' | 'tr' | 'bl' | 'br';
+    fixedCornerX: number;  // SVG coords of the fixed corner
+    fixedCornerY: number;
+  } | null>(null);
 
   const setSvgRef = useCallback((el: SVGSVGElement | null) => {
     (svgRef as React.MutableRefObject<SVGSVGElement | null>).current = el;
@@ -549,15 +585,96 @@ export const StagePlot2DCanvas: React.FC<StagePlot2DCanvasProps> = ({
     setDragging({ id: item.id, offsetX: x - pctX(item.x), offsetY: y - pctY(item.y) });
   }, [editable, toSvgCoords]);
 
+  const handleResizePointerDown = useCallback((e: React.PointerEvent, item: StageItem, corner: 'tl' | 'tr' | 'bl' | 'br') => {
+    if (!editable) return;
+    e.stopPropagation();
+    (e.currentTarget as Element).setPointerCapture(e.pointerId);
+    setSelectedId(item.id);
+    const config = getItemConfig(item);
+    const w = mW(item.customWidth ?? config.width);
+    const h = mH(item.customDepth ?? config.depth);
+    const cx = pctX(item.x);
+    const cy = pctY(item.y);
+
+    // Calculate the fixed corner (opposite to the one being dragged)
+    let fixedCornerX: number, fixedCornerY: number;
+    if (corner === 'br') {
+      fixedCornerX = cx - w / 2;
+      fixedCornerY = cy - h / 2;
+    } else if (corner === 'bl') {
+      fixedCornerX = cx + w / 2;
+      fixedCornerY = cy - h / 2;
+    } else if (corner === 'tr') {
+      fixedCornerX = cx - w / 2;
+      fixedCornerY = cy + h / 2;
+    } else { // tl
+      fixedCornerX = cx + w / 2;
+      fixedCornerY = cy + h / 2;
+    }
+
+    setResizing({ id: item.id, corner, fixedCornerX, fixedCornerY });
+  }, [editable, toSvgCoords]);
+
   const handleSvgPointerMove = useCallback((e: React.PointerEvent) => {
-    if (!dragging) return;
     const { x, y } = toSvgCoords(e.clientX, e.clientY);
+
+    // Handle resizing
+    if (resizing) {
+      const fixedX = resizing.fixedCornerX;
+      const fixedY = resizing.fixedCornerY;
+      const minW = mW(0.2);
+      const minH = mH(0.2);
+
+      // Constrain cursor position to respect minimum size
+      let draggedX = x;
+      let draggedY = y;
+
+      // Ensure minimum width constraint
+      if (draggedX < fixedX) {
+        draggedX = Math.min(draggedX, fixedX - minW);
+      } else {
+        draggedX = Math.max(draggedX, fixedX + minW);
+      }
+
+      // Ensure minimum height constraint
+      if (draggedY < fixedY) {
+        draggedY = Math.min(draggedY, fixedY - minH);
+      } else {
+        draggedY = Math.max(draggedY, fixedY + minH);
+      }
+
+      // Calculate dimensions (always positive)
+      const newW = Math.abs(draggedX - fixedX);
+      const newH = Math.abs(draggedY - fixedY);
+
+      // Calculate new center position
+      const newCenterX = (fixedX + draggedX) / 2;
+      const newCenterY = (fixedY + draggedY) / 2;
+      const newItemX = svgXToP(newCenterX);
+      const newItemY = svgYToP(newCenterY);
+
+      // Convert dimensions back to meters
+      const newCustomWidth = (newW / SVG_W) * STAGE_WIDTH;
+      const newCustomDepth = (newH / SVG_H) * STAGE_DEPTH;
+
+      setItems(items.map(it => it.id === resizing.id
+        ? { ...it, x: newItemX, y: newItemY, customWidth: newCustomWidth, customDepth: newCustomDepth }
+        : it
+      ));
+      return;
+    }
+
+    // Handle dragging
+    if (!dragging) return;
     const newX = Math.max(0, Math.min(100, svgXToP(x - dragging.offsetX)));
     const newY = Math.max(0, Math.min(100, svgYToP(y - dragging.offsetY)));
     setItems(items.map(it => it.id === dragging.id ? { ...it, x: newX, y: newY } : it));
-  }, [dragging, toSvgCoords, items, setItems]);
+  }, [dragging, resizing, toSvgCoords, items, setItems]);
 
-  const handleSvgPointerUp = useCallback(() => setDragging(null), []);
+  const handleSvgPointerUp = useCallback(() => {
+    setDragging(null);
+    setResizing(null);
+  }, []);
 
   const handleSvgClick = useCallback(() => {
     setSelectedId(null);
@@ -624,7 +741,7 @@ export const StagePlot2DCanvas: React.FC<StagePlot2DCanvasProps> = ({
 
         {/* Stage items */}
         {items.map(item => (
-          <ItemShape key={item.id} item={item} members={members} isGhost={false} isSelected={item.id === selectedId} editable={editable} onPointerDown={handleItemPointerDown} />
+          <ItemShape key={item.id} item={item} members={members} isGhost={false} isSelected={item.id === selectedId} editable={editable} onPointerDown={handleItemPointerDown} onResizePointerDown={handleResizePointerDown} />
         ))}
 
         {selectionRing}
