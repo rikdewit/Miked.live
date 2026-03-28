@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useRef, useState, useCallback, useLayoutEffect } from 'react';
-import { RotateCcw, RotateCw, Trash2, X, Plus, Minus, ArrowUp, ArrowDown, Edit } from 'lucide-react';
+import { RotateCcw, RotateCw, Trash2, Plus, Minus, ArrowUp, ArrowDown, Edit } from 'lucide-react';
 import { StageItem, BandMember } from '../types';
 import { STAGE_WIDTH, STAGE_DEPTH, getItemConfig } from '../utils/stageConfig';
 
@@ -1141,9 +1141,6 @@ export const StagePlot2DCanvas: React.FC<StagePlot2DCanvasProps> = ({
           <button onClick={deleteSelected} className="p-1.5 hover:bg-red-900/50 rounded transition-colors" title="Delete all selected">
             <Trash2 size={13} className="text-red-400" />
           </button>
-          <button onClick={() => setSelectedIds(new Set())} className="p-1.5 hover:bg-slate-700 rounded transition-colors" title="Deselect all">
-            <X size={11} className="text-slate-500" />
-          </button>
         </div>
       )}
 
@@ -1217,9 +1214,6 @@ export const StagePlot2DCanvas: React.FC<StagePlot2DCanvasProps> = ({
           <div className="w-px h-4 bg-slate-700 mx-1" />
           <button onClick={deleteSelected} className="p-1.5 hover:bg-red-900/50 rounded transition-colors" title="Delete">
             <Trash2 size={13} className="text-red-400" />
-          </button>
-          <button onClick={() => setSelectedIds(new Set())} className="p-1.5 hover:bg-slate-700 rounded transition-colors ml-0.5" title="Deselect">
-            <X size={11} className="text-slate-500" />
           </button>
         </div>
       )}
