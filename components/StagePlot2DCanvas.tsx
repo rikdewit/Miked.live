@@ -986,6 +986,38 @@ export const StagePlot2DCanvas: React.FC<StagePlot2DCanvasProps> = ({
     setSelectedIds(new Set());
   }, [selectedId, items, setItems]);
 
+  const ROTATION_STEP = 22.5 * (Math.PI / 180);
+
+  const rotateSelectedItems = useCallback((dir: 'left' | 'right') => {
+    if (selectedIds.size === 0) return;
+    const step = dir === 'right' ? ROTATION_STEP : -ROTATION_STEP;
+    const selected = items.filter(i => selectedIds.has(i.id));
+    if (selected.length === 0) return;
+
+    if (selected.length === 1) {
+      // Single item: delegate to parent callback (keeps existing behaviour)
+      onRotateItem?.(selected[0].id, dir);
+      return;
+    }
+
+    // Group: rotate each item's position around the group centroid, and spin each item
+    const cx = selected.reduce((s, i) => s + i.x, 0) / selected.length;
+    const cy = selected.reduce((s, i) => s + i.y, 0) / selected.length;
+    const cos = Math.cos(step);
+    const sin = Math.sin(step);
+
+    setItems(items.map(it => {
+      if (!selectedIds.has(it.id)) return it;
+      const dx = it.x - cx;
+      const dy = it.y - cy;
+      const newX = cx + dx * cos - dy * sin;
+      const newY = cy + dx * sin + dy * cos;
+      const next = (it.rotation || 0) + step;
+      const norm = ((next % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
+      return { ...it, x: newX, y: newY, rotation: norm };
+    }));
+  }, [selectedIds, items, setItems, onRotateItem]);
+
   const updateSocketCount = useCallback((delta: number) => {
     if (!selectedId) return;
     setItems(items.map(i => {
@@ -1099,6 +1131,13 @@ export const StagePlot2DCanvas: React.FC<StagePlot2DCanvasProps> = ({
       {selectedIds.size > 1 && editable && (
         <div className="absolute top-2 left-1/2 -translate-x-1/2 flex items-center gap-1.5 bg-slate-900/95 backdrop-blur border border-slate-700 rounded-lg px-3 py-1.5 shadow-xl z-10 pointer-events-auto">
           <span className="text-xs text-slate-400 font-medium mr-1">{selectedIds.size} selected</span>
+          <button onClick={() => rotateSelectedItems('left')} className="p-1.5 hover:bg-slate-700 rounded transition-colors" title="Rotate group left">
+            <RotateCcw size={13} className="text-slate-300" />
+          </button>
+          <button onClick={() => rotateSelectedItems('right')} className="p-1.5 hover:bg-slate-700 rounded transition-colors" title="Rotate group right">
+            <RotateCw size={13} className="text-slate-300" />
+          </button>
+          <div className="w-px h-4 bg-slate-700 mx-0.5" />
           <button onClick={deleteSelected} className="p-1.5 hover:bg-red-900/50 rounded transition-colors" title="Delete all selected">
             <Trash2 size={13} className="text-red-400" />
           </button>
@@ -1151,10 +1190,10 @@ export const StagePlot2DCanvas: React.FC<StagePlot2DCanvasProps> = ({
               </button>
             </>
           )}
-          <button onClick={() => onRotateItem?.(selectedItem.id, 'left')} className="p-1.5 hover:bg-slate-700 rounded transition-colors" title="Rotate left">
+          <button onClick={() => rotateSelectedItems('left')} className="p-1.5 hover:bg-slate-700 rounded transition-colors" title="Rotate left">
             <RotateCcw size={13} className="text-slate-300" />
           </button>
-          <button onClick={() => onRotateItem?.(selectedItem.id, 'right')} className="p-1.5 hover:bg-slate-700 rounded transition-colors" title="Rotate right">
+          <button onClick={() => rotateSelectedItems('right')} className="p-1.5 hover:bg-slate-700 rounded transition-colors" title="Rotate right">
             <RotateCw size={13} className="text-slate-300" />
           </button>
           {selectedItem.type === 'power' && (
