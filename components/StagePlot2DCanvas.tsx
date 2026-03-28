@@ -621,8 +621,10 @@ export const StagePlot2DCanvas: React.FC<StagePlot2DCanvasProps> = ({
   exportRef,
 }) => {
   const svgRef = useRef<SVGSVGElement>(null);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [dragging, setDragging] = useState<{ id: string; offsetX: number; offsetY: number } | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [marquee, setMarquee] = useState<{ x1: number; y1: number; x2: number; y2: number } | null>(null);
+  const marqueeMovedRef = useRef(false);
+  const [dragging, setDragging] = useState<{ offsets: Map<string, { ox: number; oy: number }> } | null>(null);
   const [resizing, setResizing] = useState<{
     id: string;
     corner: 'tl' | 'tr' | 'bl' | 'br';
@@ -636,6 +638,9 @@ export const StagePlot2DCanvas: React.FC<StagePlot2DCanvasProps> = ({
   const menuBarRef = useRef<HTMLDivElement>(null);
   const itemsRef = useRef(items);
   itemsRef.current = items;
+
+  // Derive a single selectedId for single-selection toolbar compatibility
+  const selectedId = selectedIds.size === 1 ? [...selectedIds][0] : null;
 
   // Store refs to label text elements and their measured dimensions
   const labelTextRefsMap = useRef<Map<string, SVGTextElement>>(new Map());
@@ -782,16 +787,37 @@ export const StagePlot2DCanvas: React.FC<StagePlot2DCanvasProps> = ({
     if (!editable) return;
     e.stopPropagation();
     (e.currentTarget as Element).setPointerCapture(e.pointerId);
-    setSelectedId(item.id);
+
+    const isAlreadySelected = selectedIds.has(item.id);
+    let newIds: Set<string>;
+    if (e.shiftKey) {
+      newIds = new Set(selectedIds);
+      if (isAlreadySelected) {
+        newIds.delete(item.id);
+      } else {
+        newIds.add(item.id);
+      }
+    } else if (isAlreadySelected) {
+      newIds = selectedIds; // keep group
+    } else {
+      newIds = new Set([item.id]);
+    }
+    setSelectedIds(newIds);
+
     const { x, y } = toSvgCoords(e.clientX, e.clientY);
-    setDragging({ id: item.id, offsetX: x - pctX(item.x), offsetY: y - pctY(item.y) });
-  }, [editable, toSvgCoords]);
+    const offsets = new Map<string, { ox: number; oy: number }>();
+    for (const id of newIds) {
+      const it = itemsRef.current.find(i => i.id === id);
+      if (it) offsets.set(id, { ox: x - pctX(it.x), oy: y - pctY(it.y) });
+    }
+    setDragging({ offsets });
+  }, [editable, toSvgCoords, selectedIds]);
 
   const handleResizePointerDown = useCallback((e: React.PointerEvent, item: StageItem, corner: 'tl' | 'tr' | 'bl' | 'br') => {
     if (!editable) return;
     e.stopPropagation();
     (e.currentTarget as Element).setPointerCapture(e.pointerId);
-    setSelectedId(item.id);
+    setSelectedIds(new Set([item.id]));
     const config = getItemConfig(item);
     const w = mW(item.customWidth ?? config.width);
     const h = mH(item.customDepth ?? config.depth);
@@ -887,26 +913,77 @@ export const StagePlot2DCanvas: React.FC<StagePlot2DCanvasProps> = ({
       return;
     }
 
-    // Handle dragging
-    if (!dragging) return;
-    const newX = Math.max(0, Math.min(100, svgXToP(x - dragging.offsetX)));
-    const newY = Math.max(0, Math.min(100, svgYToP(y - dragging.offsetY)));
-    setItems(items.map(it => it.id === dragging.id ? { ...it, x: newX, y: newY } : it));
-  }, [dragging, resizing, toSvgCoords, items, setItems]);
+    // Handle dragging (group)
+    if (dragging) {
+      // Compute desired positions for all dragging items
+      const desired = new Map<string, { nx: number; ny: number }>();
+      for (const [id, off] of dragging.offsets) {
+        desired.set(id, { nx: svgXToP(x - off.ox), ny: svgYToP(y - off.oy) });
+      }
+
+      // Find the most restrictive boundary across all items, then shift the whole group
+      let adjX = 0;
+      let adjY = 0;
+      for (const { nx, ny } of desired.values()) {
+        if (nx < 0) adjX = Math.max(adjX, -nx);
+        if (ny < 0) adjY = Math.max(adjY, -ny);
+      }
+      for (const { nx, ny } of desired.values()) {
+        if (nx + adjX > 100) adjX = Math.min(adjX, 100 - nx);
+        if (ny + adjY > 100) adjY = Math.min(adjY, 100 - ny);
+      }
+
+      setItems(items.map(it => {
+        const d = desired.get(it.id);
+        if (!d) return it;
+        return { ...it, x: d.nx + adjX, y: d.ny + adjY };
+      }));
+      return;
+    }
+
+    // Handle marquee
+    if (marquee) {
+      marqueeMovedRef.current = true;
+      setMarquee(prev => prev ? { ...prev, x2: x, y2: y } : null);
+    }
+  }, [dragging, resizing, marquee, toSvgCoords, items, setItems]);
+
+  const handleSvgPointerDown = useCallback((e: React.PointerEvent) => {
+    if (!editable) return;
+    marqueeMovedRef.current = false;
+    const { x, y } = toSvgCoords(e.clientX, e.clientY);
+    setMarquee({ x1: x, y1: y, x2: x, y2: y });
+    (e.currentTarget as Element).setPointerCapture(e.pointerId);
+  }, [editable, toSvgCoords]);
 
   const handleSvgPointerUp = useCallback(() => {
     setDragging(null);
     setResizing(null);
-  }, []);
-
-  const handleSvgClick = useCallback(() => {
-    setSelectedId(null);
-  }, []);
+    if (marquee) {
+      if (marqueeMovedRef.current) {
+        const minX = Math.min(marquee.x1, marquee.x2);
+        const maxX = Math.max(marquee.x1, marquee.x2);
+        const minY = Math.min(marquee.y1, marquee.y2);
+        const maxY = Math.max(marquee.y1, marquee.y2);
+        const hit = itemsRef.current
+          .filter(it => {
+            const cx = pctX(it.x);
+            const cy = pctY(it.y);
+            return cx >= minX && cx <= maxX && cy >= minY && cy <= maxY;
+          })
+          .map(it => it.id);
+        setSelectedIds(new Set(hit));
+      } else {
+        setSelectedIds(new Set());
+      }
+      setMarquee(null);
+    }
+  }, [marquee]);
 
   const deleteSelected = useCallback(() => {
-    if (!selectedId) return;
-    setItems(items.filter(i => i.id !== selectedId));
-    setSelectedId(null);
+    if (selectedIds.size === 0) return;
+    setItems(items.filter(i => !selectedIds.has(i.id)));
+    setSelectedIds(new Set());
   }, [selectedId, items, setItems]);
 
   const updateSocketCount = useCallback((delta: number) => {
@@ -965,9 +1042,9 @@ export const StagePlot2DCanvas: React.FC<StagePlot2DCanvasProps> = ({
         viewBox={`0 0 ${SVG_W} ${SVG_H}`}
         className="w-full h-full"
         data-export-svg="true"
+        onPointerDown={handleSvgPointerDown}
         onPointerMove={handleSvgPointerMove}
         onPointerUp={handleSvgPointerUp}
-        onClick={handleSvgClick}
         style={{ touchAction: 'none' }}
       >
         {/* Stage floor */}
@@ -997,11 +1074,39 @@ export const StagePlot2DCanvas: React.FC<StagePlot2DCanvasProps> = ({
 
         {/* Stage items */}
         {items.map(item => (
-          <ItemShape key={item.id} item={item} members={members} isGhost={false} isSelected={item.id === selectedId} editable={editable} onPointerDown={handleItemPointerDown} onResizePointerDown={handleResizePointerDown} labelDimensions={labelDimensions} labelTextRefsMap={labelTextRefsMap} />
+          <ItemShape key={item.id} item={item} members={members} isGhost={false} isSelected={selectedIds.has(item.id)} editable={editable} onPointerDown={handleItemPointerDown} onResizePointerDown={handleResizePointerDown} labelDimensions={labelDimensions} labelTextRefsMap={labelTextRefsMap} />
         ))}
 
         {selectionRing}
+
+        {/* Marquee selection rect */}
+        {marquee && (
+          <rect
+            x={Math.min(marquee.x1, marquee.x2)}
+            y={Math.min(marquee.y1, marquee.y2)}
+            width={Math.abs(marquee.x2 - marquee.x1)}
+            height={Math.abs(marquee.y2 - marquee.y1)}
+            fill="rgba(129,140,248,0.1)"
+            stroke="#818cf8"
+            strokeWidth={1}
+            strokeDasharray="4 2"
+            pointerEvents="none"
+          />
+        )}
       </svg>
+
+      {/* Multi-selection toolbar */}
+      {selectedIds.size > 1 && editable && (
+        <div className="absolute top-2 left-1/2 -translate-x-1/2 flex items-center gap-1.5 bg-slate-900/95 backdrop-blur border border-slate-700 rounded-lg px-3 py-1.5 shadow-xl z-10 pointer-events-auto">
+          <span className="text-xs text-slate-400 font-medium mr-1">{selectedIds.size} selected</span>
+          <button onClick={deleteSelected} className="p-1.5 hover:bg-red-900/50 rounded transition-colors" title="Delete all selected">
+            <Trash2 size={13} className="text-red-400" />
+          </button>
+          <button onClick={() => setSelectedIds(new Set())} className="p-1.5 hover:bg-slate-700 rounded transition-colors" title="Deselect all">
+            <X size={11} className="text-slate-500" />
+          </button>
+        </div>
+      )}
 
       {/* Selected item toolbar */}
       {selectedItem && editable && menuBarPos && (
@@ -1074,7 +1179,7 @@ export const StagePlot2DCanvas: React.FC<StagePlot2DCanvasProps> = ({
           <button onClick={deleteSelected} className="p-1.5 hover:bg-red-900/50 rounded transition-colors" title="Delete">
             <Trash2 size={13} className="text-red-400" />
           </button>
-          <button onClick={() => setSelectedId(null)} className="p-1.5 hover:bg-slate-700 rounded transition-colors ml-0.5" title="Deselect">
+          <button onClick={() => setSelectedIds(new Set())} className="p-1.5 hover:bg-slate-700 rounded transition-colors ml-0.5" title="Deselect">
             <X size={11} className="text-slate-500" />
           </button>
         </div>
