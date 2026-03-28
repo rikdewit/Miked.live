@@ -40,7 +40,7 @@ function getItemBoundingBox(
   if (item.type === 'monitor') {
     // MONITOR.svg viewBox: 613×296
     const aspect = 613 / 296;
-    const sw = Math.min(w, h * aspect) * 2.2;
+    const sw = Math.min(w, h * aspect) * 1.9;
     return { halfW: sw / 2, halfH: sw / aspect / 2 };
   }
 
@@ -737,13 +737,32 @@ export const StagePlot2DCanvas: React.FC<StagePlot2DCanvasProps> = ({
 
     const MENU_GAP = 18;
     const menuBarHeight = menuBarRef.current?.offsetHeight ?? 34;
-    const relativeLeft = svgOffsetX + contentOffsetX + itemPixelX;
+    const menuBarWidth = menuBarRef.current?.offsetWidth ?? 0;
+    let relativeLeft = svgOffsetX + contentOffsetX + itemPixelX;
     // Subtract menuBarHeight so the bottom edge of the menu is MENU_GAP above the item (symmetric with bottom)
     let relativeTop = svgOffsetY + contentOffsetY + itemPixelY - rotatedHalfHScreen - MENU_GAP - menuBarHeight;
 
     // If menu would be off-screen on top, flip it below the item
     if (relativeTop < 0) {
       relativeTop = svgOffsetY + contentOffsetY + itemPixelY + rotatedHalfHScreen + MENU_GAP;
+    }
+
+    // Constrain horizontal position to keep menu bar on screen
+    // Menu bar is centered on relativeLeft via transform: translateX(-50%)
+    if (menuBarWidth > 0) {
+      const menuBarHalfWidth = menuBarWidth / 2;
+      const leftEdge = relativeLeft - menuBarHalfWidth;
+      const rightEdge = relativeLeft + menuBarHalfWidth;
+
+      // If menu goes off-screen on left, shift right
+      if (leftEdge < 0) {
+        relativeLeft = menuBarHalfWidth;
+      }
+
+      // If menu goes off-screen on right, shift left
+      if (rightEdge > containerRect.width) {
+        relativeLeft = containerRect.width - menuBarHalfWidth;
+      }
     }
 
     setMenuBarPos({ top: relativeTop, left: relativeLeft });
