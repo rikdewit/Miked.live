@@ -680,9 +680,9 @@ function DashboardPageInner() {
           {data.stagePlot.length === 0 && !draggingMemberId && (
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
               <div className="text-center p-6 bg-slate-900/70 backdrop-blur rounded-xl border border-slate-800">
-                <Music2 size={32} className="mx-auto text-slate-700 mb-3" />
-                <p className="text-slate-500 text-sm font-medium mb-1">Stage is empty</p>
-                <p className="text-slate-600 text-xs">Click or drag members from the left panel</p>
+                <Music2 size={32} className="mx-auto text-slate-400 mb-3" />
+                <p className="text-slate-200 text-sm font-medium mb-1">Stage is empty</p>
+                <p className="text-slate-400 text-xs">Click or drag members from the left panel</p>
               </div>
             </div>
           )}
