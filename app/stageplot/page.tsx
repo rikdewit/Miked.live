@@ -434,18 +434,23 @@ function DashboardPageInner() {
         {/* Members — compact dot strip */}
         <div className="px-3 py-2.5 border-b border-gray-200 flex flex-wrap items-center gap-1.5 shrink-0">
           {data.members.map((member, index) => {
-            const color = MEMBER_COLORS[index % MEMBER_COLORS.length]
+            const colorIdx = member.colorIndex ?? index
+            const color = MEMBER_COLORS[colorIdx % MEMBER_COLORS.length]
             const isFull = getPlacementStatus(member, data.stagePlot) === 'full'
             return (
               <div key={member.id} className="relative group" title={member.name || 'Unnamed'}>
                 <div
-                  className={`w-6 h-6 rounded-full cursor-grab active:cursor-grabbing transition-opacity ${isFull ? 'opacity-40' : ''}`}
+                  className={`w-6 h-6 rounded-full cursor-grab active:cursor-grabbing transition-opacity flex items-center justify-center ${isFull ? 'opacity-40' : ''}`}
                   style={{ backgroundColor: color }}
                   draggable={!isFull}
                   onDragStart={e => handleDragStart(e, member.id, member.name)}
                   onDragEnd={handleDragEnd}
                   onClick={() => handleMemberClick(member.id)}
-                />
+                >
+                  <span className="text-[9px] font-bold text-black/70 leading-none select-none pointer-events-none">
+                    {(member.name || '?')[0].toUpperCase()}
+                  </span>
+                </div>
                 <button
                   onClick={e => { e.stopPropagation(); removeMember(member.id) }}
                   className="absolute -top-1 -right-1 hidden group-hover:flex items-center justify-center w-3.5 h-3.5 bg-red-500 rounded-full text-white z-10"
@@ -466,10 +471,10 @@ function DashboardPageInner() {
             <button
               onClick={() => {
                 const templates = [
-                  { name: 'Drummer', instruments: [{ instrumentId: 'drums' }] },
-                  { name: 'Bassist', instruments: [{ instrumentId: 'bass_amp' }] },
-                  { name: 'Guitarist', instruments: [{ instrumentId: 'gtr_amp' }] },
-                  { name: 'Lead Singer', instruments: [{ instrumentId: 'voc_lead' }] },
+                  { name: 'Drummer', instruments: [{ instrumentId: 'drums' }], colorIndex: 0 },
+                  { name: 'Bassist', instruments: [{ instrumentId: 'bass_amp' }], colorIndex: 1 },
+                  { name: 'Guitarist', instruments: [{ instrumentId: 'gtr_amp' }], colorIndex: 2 },
+                  { name: 'Lead Singer', instruments: [{ instrumentId: 'voc_lead' }], colorIndex: 3 },
                 ]
                 const newMembers = templates.map(t => ({
                   id: Math.random().toString(36).slice(2, 11),

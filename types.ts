@@ -40,6 +40,7 @@ export interface BandMember {
   id: string;
   name: string;
   instruments: InstrumentSlot[];
+  colorIndex: number;
 }
 
 export interface StageItem {

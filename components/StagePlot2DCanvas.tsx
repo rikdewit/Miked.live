@@ -90,8 +90,10 @@ function getItemBoundingBox(
 
 function getMemberColor(item: StageItem, members: BandMember[]): string {
   if (!item.memberId) return '#6b7280';
-  const idx = members.findIndex(m => m.id === item.memberId);
-  return idx >= 0 ? MEMBER_COLORS[idx % MEMBER_COLORS.length] : '#6b7280';
+  const member = members.find(m => m.id === item.memberId);
+  if (!member) return '#6b7280';
+  const idx = member.colorIndex ?? members.indexOf(member);
+  return MEMBER_COLORS[idx % MEMBER_COLORS.length];
 }
 
 function ItemShape({
@@ -141,7 +143,7 @@ function ItemShape({
     const r = Math.min(w, h) / 2;
     return (
       <g {...groupProps}>
-        <circle cx={cx} cy={cy} r={r} fill={color} stroke={isSelected ? sel : 'rgba(0,0,0,0.4)'} strokeWidth={isSelected ? 2 : 1} strokeDasharray={isSelected ? "5 2" : undefined} />
+        <circle cx={cx} cy={cy} r={r} fill={color} stroke="rgba(0,0,0,0.4)" strokeWidth={1} />
         <text x={cx} y={cy + 4} textAnchor="middle" fontSize={8} fill="black" fontFamily="system-ui,sans-serif" fontWeight="600" pointerEvents="none"
           transform={`rotate(${-rotDeg}, ${cx}, ${cy})`}>
           {label}
@@ -171,19 +173,6 @@ function ItemShape({
           fill="transparent"
           pointerEvents="auto"
         />
-        {isSelected && (
-          <rect
-            x={cx - halfW - 2}
-            y={cy - halfH - 2}
-            width={halfW * 2 + 4}
-            height={halfH * 2 + 4}
-            rx={2}
-            fill="none"
-            stroke={sel}
-            strokeWidth={2}
-            strokeDasharray="4 2"
-          />
-        )}
       </g>
     );
   }
@@ -209,19 +198,6 @@ function ItemShape({
           fill="transparent"
           pointerEvents="auto"
         />
-        {isSelected && (
-          <rect
-            x={cx - halfW - 2}
-            y={cy - halfH - 2}
-            width={halfW * 2 + 4}
-            height={halfH * 2 + 4}
-            rx={2}
-            fill="none"
-            stroke={sel}
-            strokeWidth={2}
-            strokeDasharray="4 2"
-          />
-        )}
       </g>
     );
   }
@@ -231,7 +207,7 @@ function ItemShape({
     const r = Math.min(w, h) / 2;
     return (
       <g {...groupProps}>
-        <circle cx={cx} cy={cy} r={r} fill="#475569" stroke={isSelected ? sel : '#334155'} strokeWidth={isSelected ? 2 : 1} strokeDasharray={isSelected ? "5 2" : undefined} />
+        <circle cx={cx} cy={cy} r={r} fill="#475569" stroke="#334155" strokeWidth={1} />
       </g>
     );
   }
@@ -246,7 +222,7 @@ function ItemShape({
 
     return (
       <g {...groupProps}>
-        <rect x={rectX} y={rectY} width={rectWidth} height={rectHeight} rx={3} fill="transparent" stroke={isSelected ? sel : 'transparent'} strokeWidth={isSelected ? 2 : 1} strokeDasharray={isSelected ? "5 2" : undefined} />
+        <rect x={rectX} y={rectY} width={rectWidth} height={rectHeight} rx={3} fill="transparent" stroke="transparent" strokeWidth={1} />
         <text
           ref={(el) => {
             if (el) labelTextRefsMap.current.set(item.id, el);
@@ -287,19 +263,6 @@ function ItemShape({
           fill="transparent"
           pointerEvents="auto"
         />
-        {isSelected && (
-          <rect
-            x={cx - halfW - 2}
-            y={cy - halfH - 2}
-            width={halfW * 2 + 4}
-            height={halfH * 2 + 4}
-            rx={2}
-            fill="none"
-            stroke={sel}
-            strokeWidth={2}
-            strokeDasharray="4 2"
-          />
-        )}
       </g>
     );
   }
@@ -308,7 +271,7 @@ function ItemShape({
   if (label.toLowerCase().includes('kit')) {
     return (
       <g {...groupProps}>
-        <rect x={cx - w / 2} y={cy - h / 2} width={w} height={h} rx={4} fill="#7f1d1d" stroke={isSelected ? sel : '#991b1b'} strokeWidth={isSelected ? 2 : 1} strokeDasharray={isSelected ? "5 2" : undefined} />
+        <rect x={cx - w / 2} y={cy - h / 2} width={w} height={h} rx={4} fill="#7f1d1d" stroke="#991b1b" strokeWidth={1} />
         <circle cx={cx} cy={cy + h * 0.1} r={Math.min(w, h) * 0.2} fill="none" stroke="#fca5a5" strokeWidth={1.5} />
         <circle cx={cx - w * 0.25} cy={cy - h * 0.15} r={Math.min(w, h) * 0.1} fill="none" stroke="#fca5a5" strokeWidth={1} />
         <circle cx={cx + w * 0.28} cy={cy + h * 0.15} r={Math.min(w, h) * 0.1} fill="none" stroke="#fca5a5" strokeWidth={1} />
@@ -337,19 +300,6 @@ function ItemShape({
           fill="transparent"
           pointerEvents="auto"
         />
-        {isSelected && (
-          <rect
-            x={cx - halfW - 2}
-            y={cy - halfH - 2}
-            width={halfW * 2 + 4}
-            height={halfH * 2 + 4}
-            rx={2}
-            fill="none"
-            stroke={sel}
-            strokeWidth={2}
-            strokeDasharray="4 2"
-          />
-        )}
       </g>
     );
   }
@@ -377,19 +327,6 @@ function ItemShape({
           fill="transparent"
           pointerEvents="auto"
         />
-        {isSelected && (
-          <rect
-            x={cx - halfW - 2}
-            y={cy - halfH - 2}
-            width={halfW * 2 + 4}
-            height={halfH * 2 + 4}
-            rx={2}
-            fill="none"
-            stroke={sel}
-            strokeWidth={2}
-            strokeDasharray="4 2"
-          />
-        )}
       </g>
     );
   }
@@ -440,20 +377,6 @@ function ItemShape({
           fill="transparent"
           pointerEvents="auto"
         />
-        {/* Selection border */}
-        {isSelected && (
-          <rect
-            x={stripStartX - 2}
-            y={cy - socketSize / 2 - 2}
-            width={totalStripW + 4}
-            height={socketSize + 4}
-            rx={5}
-            fill="none"
-            stroke={sel}
-            strokeWidth={2}
-            strokeDasharray="4 2"
-          />
-        )}
       </g>
     );
   }
@@ -479,19 +402,6 @@ function ItemShape({
           fill="transparent"
           pointerEvents="auto"
         />
-        {isSelected && (
-          <rect
-            x={cx - halfW - 2}
-            y={cy - halfH - 2}
-            width={halfW * 2 + 4}
-            height={halfH * 2 + 4}
-            rx={2}
-            fill="none"
-            stroke={sel}
-            strokeWidth={2}
-            strokeDasharray="4 2"
-          />
-        )}
       </g>
     );
   }
@@ -509,7 +419,7 @@ function ItemShape({
 
     return (
       <g {...groupProps}>
-        <rect x={cx - w / 2} y={cy - h / 2} width={w} height={h} rx={3} fill="#D9D9D9" stroke={isSelected ? sel : 'black'} strokeWidth={isSelected ? 2 : 1} strokeDasharray={isSelected ? "5 2" : undefined} />
+        <rect x={cx - w / 2} y={cy - h / 2} width={w} height={h} rx={3} fill="#D9D9D9" stroke="black" strokeWidth={1} />
         <text x={cx} y={cy + 4} textAnchor="middle" fontSize={9} fill="#1e293b" fontFamily="system-ui,sans-serif" fontWeight="600" pointerEvents="none"
           transform={`rotate(${-rotDeg}, ${cx}, ${cy})`}>
           {shortLabel}
@@ -551,7 +461,7 @@ function ItemShape({
 
     return (
       <g {...groupProps}>
-        <circle cx={cx} cy={cy} r={r} fill="#D9D9D9" stroke={isSelected ? sel : 'black'} strokeWidth={isSelected ? 2 : 1} strokeDasharray={isSelected ? "5 2" : undefined} />
+        <circle cx={cx} cy={cy} r={r} fill="#D9D9D9" stroke="black" strokeWidth={1} />
         <text x={cx} y={cy + 4} textAnchor="middle" fontSize={9} fill="#1e293b" fontFamily="system-ui,sans-serif" fontWeight="600" pointerEvents="none"
           transform={`rotate(${-rotDeg}, ${cx}, ${cy})`}>
           {shortLabel}
@@ -589,12 +499,62 @@ function ItemShape({
         height={h}
         rx={3}
         fill={config.color}
-        stroke={isSelected ? sel : 'rgba(0,0,0,0.35)'}
-        strokeWidth={isSelected ? 2 : 1}
-        strokeDasharray={isSelected ? "5 2" : undefined}
+        stroke="rgba(0,0,0,0.35)"
+        strokeWidth={1}
       />
     </g>
   );
+}
+
+// Renders only the selection border for an item, always on top of everything.
+function SelectionOverlay({ item, labelDimensions }: {
+  item: StageItem;
+  labelDimensions: Record<string, { width: number; height: number }>;
+}) {
+  const config = getItemConfig(item);
+  const cx = pctX(item.x);
+  const cy = pctY(item.y);
+  const w = Math.max(mW(config.width), 16);
+  const h = Math.max(mH(config.depth), 12);
+  const rotDeg = ((item.rotation || 0) * 180) / Math.PI;
+  const sel = '#818cf8';
+  const label = (item.label || '').toLowerCase();
+
+  const wrap = (child: React.ReactNode) => (
+    <g transform={`rotate(${rotDeg}, ${cx}, ${cy})`} pointerEvents="none">{child}</g>
+  );
+  const dr = (x: number, y: number, rw: number, rh: number, rx = 2) => (
+    <rect x={x} y={y} width={rw} height={rh} rx={rx} fill="none" stroke={sel} strokeWidth={2} strokeDasharray="4 2" />
+  );
+  const dc = (r: number) => (
+    <circle cx={cx} cy={cy} r={r} fill="none" stroke={sel} strokeWidth={2} strokeDasharray="5 2" />
+  );
+
+  if (config.shape === 'person') return wrap(dc(Math.min(w, h) / 2));
+  if (item.type === 'monitor') { const { halfW, halfH } = getItemBoundingBox(item, w, h); return wrap(dr(cx - halfW - 2, cy - halfH - 2, halfW * 2 + 4, halfH * 2 + 4)); }
+  if (label.includes('mic')) { const { halfW, halfH } = getItemBoundingBox(item, w, h); return wrap(dr(cx - halfW - 2, cy - halfH - 2, halfW * 2 + 4, halfH * 2 + 4)); }
+  if (config.shape === 'pole' || item.type === 'stand') return wrap(dc(Math.min(w, h) / 2));
+  if (item.customWidth === 0 && item.customDepth === 0) {
+    const dims = labelDimensions[item.id];
+    const rw = dims ? dims.width + 8 : 64;
+    const rh = dims ? dims.height + 6 : 22;
+    return wrap(dr(cx - rw / 2, cy - rh / 2, rw, rh, 3));
+  }
+  if (label.includes('drum')) { const { halfW, halfH } = getItemBoundingBox(item, w, h); return wrap(dr(cx - halfW - 2, cy - halfH - 2, halfW * 2 + 4, halfH * 2 + 4)); }
+  if (label.includes('kit')) return wrap(dr(cx - w / 2, cy - h / 2, w, h, 4));
+  if (label.includes('keys')) { const { halfW, halfH } = getItemBoundingBox(item, w, h); return wrap(dr(cx - halfW - 2, cy - halfH - 2, halfW * 2 + 4, halfH * 2 + 4)); }
+  if (label.includes('amp')) { const { halfW, halfH } = getItemBoundingBox(item, w, h); return wrap(dr(cx - halfW - 2, cy - halfH - 2, halfW * 2 + 4, halfH * 2 + 4)); }
+  if (item.type === 'power') {
+    const socketSize = Math.min(h, 40) * 0.75;
+    const totalW = (item.quantity || 1) * socketSize;
+    return wrap(dr(cx - totalW / 2 - 2, cy - socketSize / 2 - 2, totalW + 4, socketSize + 4, 5));
+  }
+  if (label.includes('di')) { const { halfW, halfH } = getItemBoundingBox(item, w, h); return wrap(dr(cx - halfW - 2, cy - halfH - 2, halfW * 2 + 4, halfH * 2 + 4)); }
+  if (item.type === 'custom' && item.shape === 'circle') return wrap(dc(Math.min(w, h) / 2));
+  if (item.type === 'custom') return wrap(dr(cx - w / 2, cy - h / 2, w, h, 3));
+  // Default
+  const { halfW, halfH } = getItemBoundingBox(item, w, h);
+  return wrap(dr(cx - halfW - 2, cy - halfH - 2, halfW * 2 + 4, halfH * 2 + 4));
 }
 
 export interface StagePlot2DCanvasProps {
@@ -1107,6 +1067,11 @@ export const StagePlot2DCanvas: React.FC<StagePlot2DCanvasProps> = ({
         {/* Stage items */}
         {items.map(item => (
           <ItemShape key={item.id} item={item} members={members} isGhost={false} isSelected={selectedIds.has(item.id)} editable={editable} onPointerDown={handleItemPointerDown} onResizePointerDown={handleResizePointerDown} labelDimensions={labelDimensions} labelTextRefsMap={labelTextRefsMap} />
+        ))}
+
+        {/* Selection overlays — always rendered on top of all items */}
+        {items.filter(i => selectedIds.has(i.id)).map(item => (
+          <SelectionOverlay key={`sel-${item.id}`} item={item} labelDimensions={labelDimensions} />
         ))}
 
         {selectionRing}

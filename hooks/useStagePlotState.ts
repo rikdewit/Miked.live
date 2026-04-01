@@ -100,20 +100,26 @@ export const useStagePlotState = () => {
   }, [])
 
   const addMember = useCallback(() => {
-    const newMember: BandMember = {
-      id: Math.random().toString(36).substr(2, 9),
-      name: '',
-      instruments: [{ instrumentId: INSTRUMENTS[0].id }]
-    };
-    setData(prev => ({ ...prev, members: [...prev.members, newMember] }));
+    setData(prev => {
+      const usedIndices = new Set(prev.members.map(m => m.colorIndex ?? prev.members.indexOf(m)));
+      let colorIndex = 0;
+      while (usedIndices.has(colorIndex)) colorIndex++;
+      const newMember: BandMember = {
+        id: Math.random().toString(36).substr(2, 9),
+        name: '',
+        instruments: [{ instrumentId: INSTRUMENTS[0].id }],
+        colorIndex,
+      };
+      return { ...prev, members: [...prev.members, newMember] };
+    });
   }, []);
 
   const applyRockTemplate = useCallback(() => {
     const newMembers: BandMember[] = [
-      { id: Math.random().toString(36).substr(2, 9), name: 'Drummer', instruments: [{ instrumentId: 'drums' }] },
-      { id: Math.random().toString(36).substr(2, 9), name: 'Bassist', instruments: [{ instrumentId: 'bass_amp' }] },
-      { id: Math.random().toString(36).substr(2, 9), name: 'Guitarist', instruments: [{ instrumentId: 'gtr_amp' }] },
-      { id: Math.random().toString(36).substr(2, 9), name: 'Lead Singer', instruments: [{ instrumentId: 'voc_lead' }] },
+      { id: Math.random().toString(36).substr(2, 9), name: 'Drummer', instruments: [{ instrumentId: 'drums' }], colorIndex: 0 },
+      { id: Math.random().toString(36).substr(2, 9), name: 'Bassist', instruments: [{ instrumentId: 'bass_amp' }], colorIndex: 1 },
+      { id: Math.random().toString(36).substr(2, 9), name: 'Guitarist', instruments: [{ instrumentId: 'gtr_amp' }], colorIndex: 2 },
+      { id: Math.random().toString(36).substr(2, 9), name: 'Lead Singer', instruments: [{ instrumentId: 'voc_lead' }], colorIndex: 3 },
     ];
     // Reset members AND clear stage plot entirely when applying a full template
     setData(prev => ({ ...prev, members: newMembers, stagePlot: [] }));
