@@ -83,3 +83,17 @@ export interface RiderData {
   stagePlot: StageItem[];
   details: RiderDetails;
 }
+
+export interface StageObjectDef {
+  id: string;
+  label: string;       // Display label in sidebar
+  category: string;    // Category ID from STAGE_OBJECT_CATEGORIES
+  svgPath?: string;    // Path to SVG preview image
+  tags?: string[];     // Extra search terms
+  // StageItem creation fields:
+  itemLabel: string;   // Label for the created StageItem
+  itemType: 'monitor' | 'power' | 'stand' | 'custom';
+  shape?: 'block' | 'circle';
+  customWidth?: number;
+  customDepth?: number;
+}

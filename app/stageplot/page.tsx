@@ -4,15 +4,14 @@ import React, { useState, useMemo, useRef, useCallback, useEffect, Suspense } fr
 import { useSearchParams } from 'next/navigation'
 import { Download, Loader2 } from 'lucide-react'
 import {
-  Plus, Trash2, GripVertical, ChevronDown, ChevronUp,
-  Check, RefreshCw, AlertTriangle,
-  Music2, X, Speaker, Mic2 as MicStand, Zap, Square, Tag, Waves, Radio, Circle
+  Plus, Trash2, AlertTriangle, Music2, X,
 } from 'lucide-react'
 import { useStagePlot } from '@/providers/StagePlotProvider'
-import { INSTRUMENTS, INITIAL_RIDER_DATA } from '@/constants'
+import { INSTRUMENTS, INITIAL_RIDER_DATA, STAGE_OBJECTS } from '@/constants'
 import { generateMemberItems } from '@/utils/stageHelpers'
-import { BandMember, StageItem, RiderData } from '@/types'
+import { BandMember, StageItem, RiderData, StageObjectDef } from '@/types'
 import { StagePlot2DCanvas, MEMBER_COLORS } from '@/components/StagePlot2DCanvas'
+import { SidebarObjectPalette } from '@/components/SidebarObjectPalette'
 import { AuthModal } from '@/components/AuthModal'
 import { supabase } from '@/utils/supabase'
 
@@ -43,181 +42,37 @@ function getPlacementStatus(member: BandMember, stagePlot: StageItem[]): 'full' 
 
 const ROTATION_STEP = 22.5 * (Math.PI / 180)
 
-// ─── Instrument group/variant selectors ──────────────────────────────────────
 
-const uniqueGroups = Array.from(new Set(INSTRUMENTS.map(i => i.group)))
+// ─── Stage object factory ────────────────────────────────────────────────────
 
-function getDefaultIdForGroup(groupName: string): string {
-  return INSTRUMENTS.find(i => i.group === groupName)?.id || INSTRUMENTS[0].id
-}
+function createStageItemFromObject(
+  objDef: StageObjectDef,
+  x: number,
+  y: number,
+  existingItems: StageItem[],
+  idOverride?: string,
+): StageItem {
+  const id = idOverride ?? `${objDef.id}-${Date.now()}`
 
-// ─── Member Card ──────────────────────────────────────────────────────────────
-
-interface MemberCardProps {
-  member: BandMember
-  index: number
-  status: 'full' | 'partial' | 'none'
-  expanded: boolean
-  onToggleExpand: () => void
-  onDragStart: (e: React.DragEvent, memberId: string, memberName: string) => void
-  onDragEnd: () => void
-  onClick: () => void
-  onUpdateName: (name: string) => void
-  onUpdateInstrument: (slotIdx: number, instrumentId: string) => void
-  onRemoveInstrument: (slotIdx: number) => void
-  onAddInstrument: () => void
-  onRemove: () => void
-}
-
-const MemberCard: React.FC<MemberCardProps> = ({
-  member, index, status, expanded, onToggleExpand,
-  onDragStart, onDragEnd, onClick, onUpdateName,
-  onUpdateInstrument, onRemoveInstrument, onAddInstrument, onRemove,
-}) => {
-  const color = MEMBER_COLORS[index % MEMBER_COLORS.length]
-  const isFull = status === 'full'
-  const isPartial = status === 'partial'
-
-  // Instrument group + variant selectors
-  const getGroupForId = (instId: string) => INSTRUMENTS.find(i => i.id === instId)?.group || uniqueGroups[0]
-  const getVariantsForGroup = (group: string) => INSTRUMENTS.filter(i => i.group === group)
-
-  return (
-    <div
-      className={`rounded-lg border transition-all ${
-        isFull
-          ? 'bg-slate-900/40 border-slate-700/50'
-          : 'bg-slate-800/60 border-slate-700 hover:border-slate-600'
-      }`}
-    >
-      {/* Card header row */}
-      <div
-        className="flex items-center gap-2 p-2.5 cursor-pointer"
-        draggable={!isFull}
-        onDragStart={e => onDragStart(e, member.id, member.name)}
-        onDragEnd={onDragEnd}
-        onClick={onClick}
-      >
-        {/* Color dot */}
-        <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: color }} />
-
-        {/* Drag handle */}
-        {!isFull && <GripVertical size={13} className="text-slate-600 shrink-0" />}
-
-        {/* Name */}
-        <span className={`flex-1 text-sm font-medium truncate ${isFull ? 'text-slate-500' : 'text-white'}`}>
-          {member.name || <span className="text-slate-500 italic">Unnamed</span>}
-        </span>
-
-        {/* Status badge */}
-        {isFull && (
-          <span className="flex items-center gap-0.5 text-[10px] bg-green-900/30 text-green-400 border border-green-900/50 px-1.5 py-0.5 rounded-full shrink-0">
-            <Check size={9} /> Placed
-          </span>
-        )}
-        {isPartial && (
-          <span className="flex items-center gap-0.5 text-[10px] bg-indigo-900/30 text-indigo-300 border border-indigo-800/50 px-1.5 py-0.5 rounded-full shrink-0">
-            <RefreshCw size={9} /> Partial
-          </span>
-        )}
-
-        {/* Expand / delete */}
-        <button
-          onClick={e => { e.stopPropagation(); onToggleExpand() }}
-          className="p-1 hover:bg-slate-700 rounded transition-colors shrink-0"
-        >
-          {expanded ? <ChevronUp size={13} className="text-slate-400" /> : <ChevronDown size={13} className="text-slate-400" />}
-        </button>
-        <button
-          onClick={e => { e.stopPropagation(); onRemove() }}
-          className="p-1 hover:bg-red-900/40 rounded transition-colors shrink-0"
-        >
-          <Trash2 size={12} className="text-slate-600 hover:text-red-400" />
-        </button>
-      </div>
-
-      {/* Instrument chips (collapsed view) */}
-      {!expanded && member.instruments.length > 0 && (
-        <div className="flex flex-wrap gap-1 px-3 pb-2.5">
-          {member.instruments.map(slot => {
-            const inst = INSTRUMENTS.find(i => i.id === slot.instrumentId)
-            return inst ? (
-              <span key={slot.instrumentId + Math.random()} className="text-[10px] bg-slate-700/60 text-slate-400 px-1.5 py-0.5 rounded">
-                {inst.group}
-              </span>
-            ) : null
-          })}
-        </div>
-      )}
-
-      {/* Expanded editor */}
-      {expanded && (
-        <div className="border-t border-slate-700/60 px-3 py-3 space-y-2" onClick={e => e.stopPropagation()}>
-          {/* Name input */}
-          <input
-            type="text"
-            value={member.name}
-            onChange={e => onUpdateName(e.target.value)}
-            placeholder="Member name"
-            className="w-full bg-slate-900 border border-slate-600 rounded px-2.5 py-1.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500"
-          />
-
-          {/* Instrument slots */}
-          <div className="space-y-1.5">
-            {member.instruments.map((slot, idx) => {
-              const currentGroup = getGroupForId(slot.instrumentId)
-              const variants = getVariantsForGroup(currentGroup)
-              const hasVariants = variants.length > 1
-
-              return (
-                <div key={idx} className="flex gap-1.5 items-center">
-                  {/* Group select */}
-                  <select
-                    value={currentGroup}
-                    onChange={e => {
-                      const newId = getDefaultIdForGroup(e.target.value)
-                      onUpdateInstrument(idx, newId)
-                    }}
-                    className="flex-1 min-w-0 bg-slate-900 border border-slate-600 rounded px-2 py-1 text-xs text-white focus:outline-none focus:border-indigo-500"
-                  >
-                    {uniqueGroups.map(g => <option key={g} value={g}>{g}</option>)}
-                  </select>
-
-                  {/* Variant select */}
-                  {hasVariants && (
-                    <select
-                      value={slot.instrumentId}
-                      onChange={e => onUpdateInstrument(idx, e.target.value)}
-                      className="flex-1 min-w-0 bg-slate-900 border border-slate-600 rounded px-2 py-1 text-xs text-white focus:outline-none focus:border-indigo-500"
-                    >
-                      {variants.map(v => (
-                        <option key={v.id} value={v.id}>{v.variantLabel || v.name}</option>
-                      ))}
-                    </select>
-                  )}
-
-                  <button
-                    onClick={() => onRemoveInstrument(idx)}
-                    className="p-1 hover:bg-red-900/40 rounded shrink-0"
-                    disabled={member.instruments.length <= 1}
-                  >
-                    <X size={11} className="text-slate-600 hover:text-red-400" />
-                  </button>
-                </div>
-              )
-            })}
-          </div>
-
-          <button
-            onClick={onAddInstrument}
-            className="flex items-center gap-1 text-xs text-indigo-400 hover:text-indigo-300 transition-colors"
-          >
-            <Plus size={11} /> Add instrument
-          </button>
-        </div>
-      )}
-    </div>
-  )
+  if (objDef.itemType === 'monitor') {
+    const nextNum = Math.max(0, ...existingItems.filter(i => i.type === 'monitor').map(i => i.monitorNumber || 0)) + 1
+    return { id, type: 'monitor', x, y, label: objDef.itemLabel, monitorNumber: nextNum }
+  }
+  if (objDef.itemType === 'power') {
+    return { id, type: 'power', x, y, label: objDef.itemLabel, quantity: 1 }
+  }
+  if (objDef.itemType === 'stand') {
+    return { id, type: 'stand', x, y, label: objDef.itemLabel }
+  }
+  return {
+    id,
+    type: 'custom',
+    x, y,
+    label: objDef.itemLabel,
+    ...(objDef.shape ? { shape: objDef.shape } : {}),
+    ...(objDef.customWidth !== undefined ? { customWidth: objDef.customWidth } : {}),
+    ...(objDef.customDepth !== undefined ? { customDepth: objDef.customDepth } : {}),
+  }
 }
 
 // ─── Main Dashboard ───────────────────────────────────────────────────────────
@@ -226,8 +81,7 @@ function DashboardPageInner() {
   const searchParams = useSearchParams()
   const {
     data, setData, updateStageItems,
-    addMember, removeMember, updateMemberName,
-    addMemberInstrument, updateMemberInstrument, removeMemberInstrument,
+    addMember, removeMember,
     moveToFront, moveToBack,
     loadFromServer, isHydrated, viewMode, setViewMode, clearSaved,
   } = useStagePlot()
@@ -295,12 +149,12 @@ function DashboardPageInner() {
 
   // Drag-from-sidebar state
   const [draggingMemberId, setDraggingMemberId] = useState<string | null>(null)
+  const [draggingObjectId, setDraggingObjectId] = useState<string | null>(null)
   const [dragPos, setDragPos] = useState<{ x: number; y: number } | null>(null)
   const dragLabelRef = useRef<HTMLDivElement>(null)
   const [dragLabelText, setDragLabelText] = useState('')
 
   // UI state
-  const [expandedMemberId, setExpandedMemberId] = useState<string | null>(null)
   const [showClearConfirm, setShowClearConfirm] = useState(false)
 
   // ── Rotation ──────────────────────────────────────────────────────────────
@@ -341,34 +195,63 @@ function DashboardPageInner() {
     setDragPos(null)
   }, [])
 
+  const handleObjectDragStart = useCallback((e: React.DragEvent, objectId: string, label: string) => {
+    e.dataTransfer.setData('stageObjectId', objectId)
+    e.dataTransfer.effectAllowed = 'copy'
+    setDraggingObjectId(objectId)
+    setDragLabelText(label)
+    if (dragLabelRef.current) e.dataTransfer.setDragImage(dragLabelRef.current, 0, 0)
+  }, [])
+
+  const handleObjectDragEnd = useCallback(() => {
+    setDraggingObjectId(null)
+    setDragPos(null)
+  }, [])
+
+  const handleAddObject = useCallback((objectId: string) => {
+    const objDef = STAGE_OBJECTS.find(o => o.id === objectId)
+    if (!objDef) return
+    const newItem = createStageItemFromObject(objDef, 50, 50, data.stagePlot)
+    updateStageItems([...data.stagePlot, newItem])
+  }, [data.stagePlot, updateStageItems])
+
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault()
     const memberId = e.dataTransfer.getData('memberId')
+    const stageObjectId = e.dataTransfer.getData('stageObjectId')
     const finalPos = dragPos
     setDraggingMemberId(null)
+    setDraggingObjectId(null)
     setDragPos(null)
 
-    if (!memberId || !finalPos) return
-    const member = data.members.find(m => m.id === memberId)
-    if (!member) return
-    if (isMemberFullyPlaced(member, data.stagePlot)) return
+    if (!finalPos) return
 
-    const potentialItems = generateMemberItems(member, finalPos.x, finalPos.y)
-    const hasPerson = data.stagePlot.some(i => i.memberId === memberId && i.type === 'person')
+    if (memberId) {
+      const member = data.members.find(m => m.id === memberId)
+      if (!member || isMemberFullyPlaced(member, data.stagePlot)) return
+      const potentialItems = generateMemberItems(member, finalPos.x, finalPos.y)
+      const hasPerson = data.stagePlot.some(i => i.memberId === memberId && i.type === 'person')
+      const itemsToAdd = potentialItems.filter(newItem => {
+        if (newItem.type === 'person' && hasPerson) return false
+        if (newItem.fromInstrumentIndex !== undefined) {
+          const idx = newItem.fromInstrumentIndex
+          const existingCore = data.stagePlot.find(i => i.memberId === memberId && i.fromInstrumentIndex === idx && !i.isPeripheral)
+          if (!newItem.isPeripheral && existingCore) return false
+          const existingSame = data.stagePlot.find(i => i.memberId === memberId && i.fromInstrumentIndex === idx && i.label === newItem.label)
+          if (existingSame) return false
+        }
+        return true
+      })
+      updateStageItems([...data.stagePlot, ...itemsToAdd])
+      return
+    }
 
-    const itemsToAdd = potentialItems.filter(newItem => {
-      if (newItem.type === 'person' && hasPerson) return false
-      if (newItem.fromInstrumentIndex !== undefined) {
-        const idx = newItem.fromInstrumentIndex
-        const existingCore = data.stagePlot.find(i => i.memberId === memberId && i.fromInstrumentIndex === idx && !i.isPeripheral)
-        if (!newItem.isPeripheral && existingCore) return false
-        const existingSame = data.stagePlot.find(i => i.memberId === memberId && i.fromInstrumentIndex === idx && i.label === newItem.label)
-        if (existingSame) return false
-      }
-      return true
-    })
-
-    updateStageItems([...data.stagePlot, ...itemsToAdd])
+    if (stageObjectId) {
+      const objDef = STAGE_OBJECTS.find(o => o.id === stageObjectId)
+      if (!objDef) return
+      const newItem = createStageItemFromObject(objDef, finalPos.x, finalPos.y, data.stagePlot)
+      updateStageItems([...data.stagePlot, newItem])
+    }
   }, [dragPos, data.members, data.stagePlot, updateStageItems])
 
   // Click-to-place (mobile fallback)
@@ -393,23 +276,34 @@ function DashboardPageInner() {
 
   // Ghost items
   const ghostItems = useMemo(() => {
-    if (!draggingMemberId || !dragPos) return []
-    const member = data.members.find(m => m.id === draggingMemberId)
-    if (!member) return []
-    const potential = generateMemberItems(member, dragPos.x, dragPos.y, `ghost-${member.id}`)
-    const hasPerson = data.stagePlot.some(i => i.memberId === draggingMemberId && i.type === 'person')
-    return potential.filter(newItem => {
-      if (newItem.type === 'person' && hasPerson) return false
-      if (newItem.fromInstrumentIndex !== undefined) {
-        const idx = newItem.fromInstrumentIndex
-        const existingCore = data.stagePlot.find(i => i.memberId === draggingMemberId && i.fromInstrumentIndex === idx && !i.isPeripheral)
-        if (!newItem.isPeripheral && existingCore) return false
-        const existingSame = data.stagePlot.find(i => i.memberId === draggingMemberId && i.fromInstrumentIndex === idx && i.label === newItem.label)
-        if (existingSame) return false
-      }
-      return true
-    })
-  }, [draggingMemberId, dragPos, data.members, data.stagePlot])
+    if (!dragPos) return []
+
+    if (draggingMemberId) {
+      const member = data.members.find(m => m.id === draggingMemberId)
+      if (!member) return []
+      const potential = generateMemberItems(member, dragPos.x, dragPos.y, `ghost-${member.id}`)
+      const hasPerson = data.stagePlot.some(i => i.memberId === draggingMemberId && i.type === 'person')
+      return potential.filter(newItem => {
+        if (newItem.type === 'person' && hasPerson) return false
+        if (newItem.fromInstrumentIndex !== undefined) {
+          const idx = newItem.fromInstrumentIndex
+          const existingCore = data.stagePlot.find(i => i.memberId === draggingMemberId && i.fromInstrumentIndex === idx && !i.isPeripheral)
+          if (!newItem.isPeripheral && existingCore) return false
+          const existingSame = data.stagePlot.find(i => i.memberId === draggingMemberId && i.fromInstrumentIndex === idx && i.label === newItem.label)
+          if (existingSame) return false
+        }
+        return true
+      })
+    }
+
+    if (draggingObjectId) {
+      const objDef = STAGE_OBJECTS.find(o => o.id === draggingObjectId)
+      if (!objDef) return []
+      return [createStageItemFromObject(objDef, dragPos.x, dragPos.y, data.stagePlot, `ghost-obj-${draggingObjectId}`)]
+    }
+
+    return []
+  }, [draggingMemberId, draggingObjectId, dragPos, data.members, data.stagePlot])
 
   // ── Download handler (shared by editor and viewer) ────────────────────────
   const handleDownloadPNG = useCallback(() => {
@@ -441,21 +335,6 @@ function DashboardPageInner() {
     img.src = url
   }, [viewMode, viewPlotData?.details?.bandName, data.details?.bandName])
 
-  // ── Toolbar actions ───────────────────────────────────────────────────────
-  const addMonitor = () => {
-    const nextNum = Math.max(...data.stagePlot.filter(i => i.type === 'monitor').map(i => i.monitorNumber || 0), 0) + 1
-    updateStageItems([...data.stagePlot, { id: `mon-${Date.now()}`, type: 'monitor', x: 50, y: 70, label: 'Mon', monitorNumber: nextNum }])
-  }
-  const addStand = () => updateStageItems([...data.stagePlot, { id: `stand-${Date.now()}`, type: 'stand', x: 50, y: 50, label: 'Mic Stand' }])
-  const addPower = () => updateStageItems([...data.stagePlot, { id: `pwr-${Date.now()}`, type: 'power', x: 50, y: 50, label: 'Power', quantity: 1 }])
-  const addCustom = () => updateStageItems([...data.stagePlot, { id: `custom-${Date.now()}`, type: 'custom', x: 50, y: 50, label: 'Custom', customWidth: 1.0, customDepth: 1.0 }])
-  const addCustomCircle = () => updateStageItems([...data.stagePlot, { id: `circle-${Date.now()}`, type: 'custom', shape: 'circle', x: 50, y: 50, label: 'Circle', customWidth: 1.0, customDepth: 1.0 }])
-  const addLabel = () => updateStageItems([...data.stagePlot, { id: `lbl-${Date.now()}`, type: 'custom', x: 50, y: 50, label: 'Label', customWidth: 0, customDepth: 0 }])
-  const addAmp = () => updateStageItems([...data.stagePlot, { id: `amp-${Date.now()}`, type: 'custom', x: 50, y: 50, label: 'Amp', customWidth: 1.3, customDepth: 0.65 }])
-  const addBassAmp = () => updateStageItems([...data.stagePlot, { id: `bass-amp-${Date.now()}`, type: 'custom', x: 50, y: 50, label: 'Bass Amp', customWidth: 2.0, customDepth: 1.0 }])
-  const addDIBox = () => updateStageItems([...data.stagePlot, { id: `di-${Date.now()}`, type: 'custom', x: 50, y: 50, label: 'DI Box', customWidth: 0.4, customDepth: 0.6 }])
-  const addKeys = () => updateStageItems([...data.stagePlot, { id: `keys-${Date.now()}`, type: 'custom', x: 50, y: 50, label: 'Keys', customWidth: 2.4, customDepth: 0.63 }])
-  const addDrumKit = () => updateStageItems([...data.stagePlot, { id: `drums-${Date.now()}`, type: 'custom', x: 50, y: 50, label: 'Drum Kit', customWidth: 2.5, customDepth: 1.2 }])
 
   // ── Render ────────────────────────────────────────────────────────────────
 
@@ -549,55 +428,41 @@ function DashboardPageInner() {
         {dragLabelText}
       </div>
 
-      {/* ── LEFT PANEL: Members ──────────────────────────────────────────── */}
-      <aside className="w-[268px] shrink-0 flex flex-col bg-slate-950 border-r border-slate-800 overflow-hidden">
-        <div className="px-4 py-3 border-b border-slate-800 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Music2 size={14} className="text-indigo-400" />
-            <span className="text-sm font-semibold text-white">Members</span>
-          </div>
-          <button
-            onClick={addMember}
-            className="flex items-center gap-1 text-xs bg-indigo-600 hover:bg-indigo-700 text-white px-2.5 py-1 rounded transition-colors"
-          >
-            <Plus size={11} /> Add
-          </button>
-        </div>
+      {/* ── LEFT PANEL ───────────────────────────────────────────────────── */}
+      <aside className="w-[272px] shrink-0 flex flex-col bg-white border-r border-gray-200 overflow-hidden">
 
-        <div className="flex-1 overflow-y-auto p-3 space-y-2">
-          {data.members.length === 0 && (
-            <div className="text-center py-8 text-slate-600 text-xs">
-              <Music2 size={24} className="mx-auto mb-2 text-slate-700" />
-              Add band members to get started
-            </div>
-          )}
-
+        {/* Members — compact dot strip */}
+        <div className="px-3 py-2.5 border-b border-gray-200 flex flex-wrap items-center gap-1.5 shrink-0">
           {data.members.map((member, index) => {
-            const status = getPlacementStatus(member, data.stagePlot)
+            const color = MEMBER_COLORS[index % MEMBER_COLORS.length]
+            const isFull = getPlacementStatus(member, data.stagePlot) === 'full'
             return (
-              <MemberCard
-                key={member.id}
-                member={member}
-                index={index}
-                status={status}
-                expanded={expandedMemberId === member.id}
-                onToggleExpand={() => setExpandedMemberId(expandedMemberId === member.id ? null : member.id)}
-                onDragStart={handleDragStart}
-                onDragEnd={handleDragEnd}
-                onClick={() => handleMemberClick(member.id)}
-                onUpdateName={name => updateMemberName(member.id, name)}
-                onUpdateInstrument={(idx, instId) => updateMemberInstrument(member.id, idx, instId)}
-                onRemoveInstrument={idx => removeMemberInstrument(member.id, idx)}
-                onAddInstrument={() => addMemberInstrument(member.id)}
-                onRemove={() => removeMember(member.id)}
-              />
+              <div key={member.id} className="relative group" title={member.name || 'Unnamed'}>
+                <div
+                  className={`w-6 h-6 rounded-full cursor-grab active:cursor-grabbing transition-opacity ${isFull ? 'opacity-40' : ''}`}
+                  style={{ backgroundColor: color }}
+                  draggable={!isFull}
+                  onDragStart={e => handleDragStart(e, member.id, member.name)}
+                  onDragEnd={handleDragEnd}
+                  onClick={() => handleMemberClick(member.id)}
+                />
+                <button
+                  onClick={e => { e.stopPropagation(); removeMember(member.id) }}
+                  className="absolute -top-1 -right-1 hidden group-hover:flex items-center justify-center w-3.5 h-3.5 bg-red-500 rounded-full text-white z-10"
+                >
+                  <X size={7} />
+                </button>
+              </div>
             )
           })}
-        </div>
-
-        {/* Template shortcut */}
-        {data.members.length === 0 && (
-          <div className="px-3 pb-3">
+          <button
+            onClick={addMember}
+            className="w-6 h-6 rounded-full border-2 border-dashed border-gray-300 hover:border-indigo-500 flex items-center justify-center transition-colors"
+            title="Add member"
+          >
+            <Plus size={11} className="text-gray-400" />
+          </button>
+          {data.members.length === 0 && (
             <button
               onClick={() => {
                 const templates = [
@@ -607,56 +472,41 @@ function DashboardPageInner() {
                   { name: 'Lead Singer', instruments: [{ instrumentId: 'voc_lead' }] },
                 ]
                 const newMembers = templates.map(t => ({
-                  id: Math.random().toString(36).substr(2, 9),
+                  id: Math.random().toString(36).slice(2, 11),
                   ...t,
                 }))
                 setData(prev => ({ ...prev, members: newMembers, stagePlot: [] }))
               }}
-              className="w-full text-xs text-slate-500 hover:text-slate-300 border border-slate-800 hover:border-slate-600 rounded py-2 transition-colors"
+              className="text-[10px] text-gray-400 hover:text-indigo-500 border border-dashed border-gray-300 hover:border-indigo-400 rounded px-2 py-0.5 transition-colors"
             >
-              Use rock band template
+              Use template
             </button>
-          </div>
-        )}
+          )}
+        </div>
 
-        {/* Stage item buttons */}
-        <div className="border-t border-slate-800 p-3 space-y-1.5">
-          <span className="text-[10px] font-semibold text-slate-600 uppercase tracking-wider px-0.5">Add to stage</span>
-          <div className="grid grid-cols-2 gap-1.5">
-            {[
-              { label: 'Monitor', icon: <Speaker size={12} />, action: addMonitor },
-              { label: 'Mic Stand', icon: <MicStand size={12} />, action: addStand },
-              { label: 'Amp', icon: <Waves size={12} />, action: addAmp },
-              { label: 'Bass Amp', icon: <Waves size={12} />, action: addBassAmp },
-              { label: 'Keys', icon: <Music2 size={12} />, action: addKeys },
-              { label: 'Drums', icon: <Music2 size={12} />, action: addDrumKit },
-              { label: 'DI Box', icon: <Radio size={12} />, action: addDIBox },
-              { label: 'Power', icon: <Zap size={12} />, action: addPower },
-              { label: 'Custom', icon: <Square size={12} />, action: addCustom },
-              { label: 'Circle', icon: <Circle size={12} />, action: addCustomCircle },
-              { label: 'Label', icon: <Tag size={12} />, action: addLabel },
-            ].map(({ label, icon, action }) => (
-              <button
-                key={label}
-                onClick={action}
-                className="flex items-center gap-1.5 px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded text-xs border border-slate-700 transition-colors"
-              >
-                {icon} {label}
-              </button>
-            ))}
-          </div>
+        {/* Object palette - takes rest of space */}
+        <div className="flex-1 min-h-0 flex flex-col border-t border-gray-200">
+          <SidebarObjectPalette
+            onObjectDragStart={handleObjectDragStart}
+            onObjectDragEnd={handleObjectDragEnd}
+            onAddObject={handleAddObject}
+          />
+        </div>
+
+        {/* Footer: Clear stage */}
+        <div className="border-t border-gray-200 p-2 shrink-0">
           <button
             onClick={() => data.stagePlot.length > 0 && setShowClearConfirm(true)}
             disabled={data.stagePlot.length === 0}
-            className="w-full flex items-center justify-center gap-1.5 px-2.5 py-1.5 text-xs border rounded transition-colors disabled:opacity-30 disabled:cursor-not-allowed bg-red-950/40 hover:bg-red-900/40 text-red-300 border-red-900/50"
+            className="w-full flex items-center justify-center gap-1.5 px-2 py-1.5 text-xs border rounded transition-colors disabled:opacity-30 disabled:cursor-not-allowed bg-red-50 hover:bg-red-100 text-red-500 border-red-200"
           >
-            <Trash2 size={11} /> Clear stage
+            <Trash2 size={10} /> Clear stage
           </button>
         </div>
       </aside>
 
       {/* ── CENTER: Stage Canvas ─────────────────────────────────────────── */}
-      <main className="flex-1 flex flex-col min-w-0 bg-slate-900 overflow-hidden">
+      <main className="flex-1 flex flex-col min-w-0 bg-gray-100 overflow-hidden">
 
         {/* Drop zone + canvas */}
         <div
@@ -679,10 +529,10 @@ function DashboardPageInner() {
           {/* Empty state */}
           {data.stagePlot.length === 0 && !draggingMemberId && (
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-              <div className="text-center p-6 bg-slate-900/70 backdrop-blur rounded-xl border border-slate-800">
-                <Music2 size={32} className="mx-auto text-slate-400 mb-3" />
-                <p className="text-slate-200 text-sm font-medium mb-1">Stage is empty</p>
-                <p className="text-slate-400 text-xs">Click or drag members from the left panel</p>
+              <div className="text-center p-6 bg-white/80 backdrop-blur rounded-xl border border-gray-200 shadow-sm">
+                <Music2 size={32} className="mx-auto text-gray-400 mb-3" />
+                <p className="text-gray-700 text-sm font-medium mb-1">Stage is empty</p>
+                <p className="text-gray-500 text-xs">Click or drag members from the left panel</p>
               </div>
             </div>
           )}
