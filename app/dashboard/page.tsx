@@ -204,7 +204,7 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="bg-slate-950 flex flex-col min-h-full">
+    <div className="bg-white flex flex-col min-h-full">
       <div className="max-w-4xl mx-auto px-6 py-10 w-full">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
@@ -228,11 +228,11 @@ export default function DashboardPage() {
 
         {/* Error State */}
         {error && (
-          <div className="bg-red-900/20 border border-red-800 rounded-lg p-6 flex items-start gap-3">
+          <div className="bg-red-50 border border-red-300 rounded-lg p-6 flex items-start gap-3">
             <AlertTriangle size={20} className="text-red-500 shrink-0 mt-0.5" />
             <div>
-              <h3 className="text-red-400 font-semibold">Error</h3>
-              <p className="text-red-300 text-sm mt-1">{error}</p>
+              <h3 className="text-red-600 font-semibold">Error</h3>
+              <p className="text-red-500 text-sm mt-1">{error}</p>
             </div>
           </div>
         )}
@@ -240,10 +240,10 @@ export default function DashboardPage() {
         {/* Empty State */}
         {!loading && !error && stageplots.length === 0 && (
           <div className="flex flex-col items-center justify-center py-20">
-            <div className="bg-slate-900 border border-slate-800 rounded-xl p-12 text-center max-w-sm">
-              <Music2 size={40} className="text-slate-700 mx-auto mb-4" />
-              <h2 className="text-lg font-semibold text-slate-400 mb-2">No stage plots yet</h2>
-              <p className="text-slate-600 text-sm mb-6">Create your first stage plot to get started</p>
+            <div className="bg-white border border-slate-200 rounded-xl p-12 text-center max-w-sm">
+              <Music2 size={40} className="text-slate-300 mx-auto mb-4" />
+              <h2 className="text-lg font-semibold text-slate-500 mb-2">No stage plots yet</h2>
+              <p className="text-slate-400 text-sm mb-6">Create your first stage plot to get started</p>
               <button
                 onClick={() => router.push('/stageplot')}
                 className="flex items-center justify-center gap-2 w-full px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium transition-colors"
@@ -262,7 +262,7 @@ export default function DashboardPage() {
               <div
                 key={plot.id}
                 onClick={() => renamingId !== plot.id && router.push(`/stageplot?id=${plot.id}`)}
-                className="bg-slate-900 border border-slate-800 hover:border-slate-600 rounded-xl p-5 cursor-pointer transition-colors group relative"
+                className="bg-white border border-slate-200 hover:border-slate-400 rounded-xl p-5 cursor-pointer transition-colors group relative"
               >
                 {/* Card Top Row */}
                 <div className="flex items-start justify-between gap-3 mb-3">
@@ -284,11 +284,11 @@ export default function DashboardPage() {
                         }}
                         onBlur={() => handleRenameSave(plot.id)}
                         onClick={e => e.stopPropagation()}
-                        className="flex-1 min-w-0 bg-slate-800 border border-slate-600 rounded px-2 py-1 text-white font-semibold text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        className="flex-1 min-w-0 bg-slate-50 border border-slate-300 rounded px-2 py-1 text-slate-900 font-semibold text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                       />
                     ) : (
-                      <h3 className="text-white font-semibold truncate">
-                        {plot.bandName || <span className="italic text-slate-500">Untitled Stage Plot</span>}
+                      <h3 className="text-slate-900 font-semibold truncate">
+                        {plot.bandName || <span className="italic text-slate-400">Untitled Stage Plot</span>}
                       </h3>
                     )}
                   </div>
@@ -298,7 +298,7 @@ export default function DashboardPage() {
                         e.stopPropagation()
                         setOpenMenuId(openMenuId === plot.id ? null : plot.id)
                       }}
-                      className="text-slate-600 hover:text-indigo-400 transition-colors p-1 shrink-0"
+                      className="text-slate-400 hover:text-indigo-500 transition-colors p-1 shrink-0"
                       aria-label="More options"
                       data-menu-button
                     >
@@ -307,13 +307,13 @@ export default function DashboardPage() {
 
                     {/* Dropdown Menu */}
                     {openMenuId === plot.id && (
-                      <div className="absolute top-full right-0 mt-1 w-44 bg-slate-900 border border-slate-700 rounded-lg shadow-2xl z-50" data-menu-content>
+                      <div className="absolute top-full right-0 mt-1 w-44 bg-white border border-slate-200 rounded-lg shadow-2xl z-50" data-menu-content>
                         <button
                           onClick={e => {
                             e.stopPropagation()
                             handleRenameStart(plot)
                           }}
-                          className="w-full text-left px-4 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors first:rounded-t-lg"
+                          className="w-full text-left px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors first:rounded-t-lg"
                         >
                           Rename
                         </button>
@@ -322,7 +322,7 @@ export default function DashboardPage() {
                             e.stopPropagation()
                             handleCopy(plot)
                           }}
-                          className="w-full text-left px-4 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors"
+                          className="w-full text-left px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors"
                         >
                           Make a copy
                         </button>
@@ -341,7 +341,7 @@ export default function DashboardPage() {
                 </div>
 
                 {/* Card Bottom Row */}
-                <div className="text-xs text-slate-500 space-y-1">
+                <div className="text-xs text-slate-400 space-y-1">
                   <div>Created: {relativeTime(plot.created_at)}</div>
                   <div>Updated: {relativeTime(plot.updated_at)}</div>
                 </div>

@@ -253,7 +253,7 @@ export const Header: React.FC = () => {
   // Viewer mode - show minimal header for anonymous viewers
   if (isStageplot && viewMode === 'viewer') {
     return (
-      <nav className="no-print bg-slate-950 border-b border-slate-800/50 sticky top-0 z-50">
+      <nav className="no-print bg-white border-b border-slate-200/70 sticky top-0 z-50">
         <div className="px-4 h-16 flex items-center gap-3">
           <div className="flex items-center gap-2 shrink-0">
             <div className="bg-indigo-600 p-1.5 rounded-lg cursor-pointer" onClick={handleLogoClick} title="Go to home">
@@ -262,14 +262,14 @@ export const Header: React.FC = () => {
           </div>
 
           {data.details.bandName && (
-            <span className="text-base font-medium text-slate-300">{data.details.bandName}</span>
+            <span className="text-base font-medium text-slate-600">{data.details.bandName}</span>
           )}
 
           <div className="flex-1" />
 
           <button
             onClick={handleExportPNG}
-            className="flex items-center gap-1.5 px-3 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 hover:text-white rounded text-sm transition-colors"
+            className="flex items-center gap-1.5 px-3 py-2 bg-slate-100 hover:bg-slate-200 border border-slate-300 text-slate-600 hover:text-slate-900 rounded text-sm transition-colors"
           >
             <Download size={14} /> Download
           </button>
@@ -282,7 +282,7 @@ export const Header: React.FC = () => {
     const displayName = data.details.bandName || 'Untitled Stage Plot'
     return (
       <>
-        <nav className="no-print bg-slate-950 border-b border-slate-800/50 sticky top-0 z-50">
+        <nav className="no-print bg-white border-b border-slate-200/70 sticky top-0 z-50">
           <div className="px-4 h-16 flex items-center gap-3">
             {/* Logo */}
             <div className="flex items-center gap-2 shrink-0">
@@ -292,15 +292,15 @@ export const Header: React.FC = () => {
               {user && (
                 <button
                   onClick={() => router.push('/dashboard')}
-                  className="p-1.5 hover:bg-slate-800 rounded-lg transition-colors"
+                  className="p-1.5 hover:bg-slate-100 rounded-lg transition-colors"
                   title="Go to dashboard"
                 >
-                  <Home className="w-5 h-5 text-slate-400 hover:text-slate-200" />
+                  <Home className="w-5 h-5 text-slate-500 hover:text-slate-800" />
                 </button>
               )}
             </div>
 
-            {user && <span className="text-slate-700 select-none">|</span>}
+            {user && <span className="text-slate-300 select-none">|</span>}
 
             {/* Editable title */}
             {editingTitle ? (
@@ -313,13 +313,13 @@ export const Header: React.FC = () => {
                   if (e.key === 'Enter') handleTitleSave()
                   if (e.key === 'Escape') setEditingTitle(false)
                 }}
-                className="bg-transparent text-white text-base font-medium focus:outline-none border-b border-indigo-500 px-0.5 w-48 min-w-0"
+                className="bg-transparent text-slate-900 text-base font-medium focus:outline-none border-b border-indigo-500 px-0.5 w-48 min-w-0"
                 placeholder="Untitled Stage Plot"
               />
             ) : (
               <button
                 onClick={handleTitleClick}
-                className="text-base font-medium text-slate-300 hover:text-white hover:bg-slate-800/60 px-1.5 py-0.5 rounded transition-colors truncate max-w-xs"
+                className="text-base font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100/60 px-1.5 py-0.5 rounded transition-colors truncate max-w-xs"
               >
                 {displayName}
               </button>
@@ -354,7 +354,7 @@ export const Header: React.FC = () => {
                 disabled={isSaveDisabled}
                 className={`text-xs px-3 py-1.5 rounded transition-colors ${
                   isSaveDisabled
-                    ? 'bg-slate-700 text-slate-500 cursor-not-allowed'
+                    ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
                     : 'bg-indigo-600 hover:bg-indigo-700 text-white'
                 } disabled:opacity-50`}
               >
@@ -365,14 +365,14 @@ export const Header: React.FC = () => {
             <div className="flex-1" />
 
             {/* Stats */}
-            <span className="hidden sm:block text-sm text-slate-600 mr-1">
+            <span className="hidden sm:block text-sm text-slate-300 mr-1">
               {data.stagePlot.length} item{data.stagePlot.length !== 1 ? 's' : ''} · {data.members.length} member{data.members.length !== 1 ? 's' : ''}
             </span>
 
             {/* Download button */}
             <button
               onClick={handleExportPNG}
-              className="flex items-center gap-1.5 px-3 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 hover:text-white rounded text-sm transition-colors"
+              className="flex items-center gap-1.5 px-3 py-2 bg-slate-100 hover:bg-slate-200 border border-slate-300 text-slate-600 hover:text-slate-900 rounded text-sm transition-colors"
             >
               <Download size={14} /> Download
             </button>
@@ -395,10 +395,10 @@ export const Header: React.FC = () => {
               </button>
 
               {shareOpen && savedStageplotId && (
-                <div className="absolute right-0 top-full mt-2 w-72 bg-slate-900 border border-slate-700 rounded-lg shadow-2xl p-4 z-50">
+                <div className="absolute right-0 top-full mt-2 w-72 bg-white border border-slate-200 rounded-lg shadow-2xl p-4 z-50">
                   <div className="flex items-center justify-between mb-3">
-                    <span className="text-xs font-semibold text-slate-300">Share stage plot</span>
-                    <button onClick={() => setShareOpen(false)} className="text-slate-600 hover:text-slate-400">
+                    <span className="text-xs font-semibold text-slate-700">Share stage plot</span>
+                    <button onClick={() => setShareOpen(false)} className="text-slate-300 hover:text-slate-500">
                       <X size={13} />
                     </button>
                   </div>
@@ -409,25 +409,25 @@ export const Header: React.FC = () => {
                       <input
                         readOnly
                         value={shareUrlValue}
-                        className="flex-1 min-w-0 bg-slate-800 border border-slate-700 rounded px-2 py-1.5 text-xs text-slate-400 focus:outline-none"
+                        className="flex-1 min-w-0 bg-slate-50 border border-slate-300 rounded px-2 py-1.5 text-xs text-slate-500 focus:outline-none"
                       />
                       <button
                         onClick={handleCopyShareUrl}
-                        className="flex items-center gap-1 px-2.5 py-1.5 bg-slate-700 hover:bg-slate-600 text-white rounded text-xs transition-colors shrink-0"
+                        className="flex items-center gap-1 px-2.5 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded text-xs transition-colors shrink-0"
                       >
-                        {copied ? <CheckCheck size={12} className="text-green-400" /> : <Copy size={12} />}
+                        {copied ? <CheckCheck size={12} className="text-green-500" /> : <Copy size={12} />}
                       </button>
                     </div>
 
                     {/* Stats */}
-                    <div className="text-xs text-slate-500 space-y-1">
+                    <div className="text-xs text-slate-400 space-y-1">
                       {shareStats ? (
                         <>
                           <p>Viewed {shareStats.view_count} time{shareStats.view_count !== 1 ? 's' : ''}</p>
                           <p>Created {relativeTime(shareStats.created_at)}</p>
                         </>
                       ) : (
-                        <p className="text-slate-600">Loading stats…</p>
+                        <p className="text-slate-300">Loading stats…</p>
                       )}
                       {savedAt && <p>Saved {relativeTime(savedAt)}</p>}
                     </div>
@@ -446,17 +446,17 @@ export const Header: React.FC = () => {
                     setIsAuthModalOpen(true)
                   }
                 }}
-                className="flex items-center gap-2 px-2 py-1 hover:bg-slate-800 rounded transition-colors"
+                className="flex items-center gap-2 px-2 py-1 hover:bg-slate-100 rounded transition-colors"
                 title={user ? "User menu" : "Sign in"}
               >
-                <UserCircle size={20} className="text-slate-300" />
+                <UserCircle size={20} className="text-slate-500" />
               </button>
 
               {user && userMenuOpen && (
-                <div className="absolute right-0 top-full mt-2 w-48 bg-slate-900 border border-slate-700 rounded-lg shadow-2xl z-50">
-                  <div className="p-3 border-b border-slate-700">
-                    <p className="text-xs text-slate-500">Signed in as</p>
-                    <p className="text-xs text-slate-300 font-medium truncate">{user.email}</p>
+                <div className="absolute right-0 top-full mt-2 w-48 bg-white border border-slate-200 rounded-lg shadow-2xl z-50">
+                  <div className="p-3 border-b border-slate-200">
+                    <p className="text-xs text-slate-400">Signed in as</p>
+                    <p className="text-xs text-slate-700 font-medium truncate">{user.email}</p>
                   </div>
                   <button
                     onClick={async () => {
@@ -472,7 +472,7 @@ export const Header: React.FC = () => {
                       }
                     }}
                     disabled={signingOut}
-                    className="w-full text-left px-3 py-2 text-xs text-slate-300 hover:text-white hover:bg-slate-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                    className="w-full text-left px-3 py-2 text-xs text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                   >
                     <LogOut size={13} />
                     {signingOut ? 'Signing out...' : 'Sign out'}
@@ -495,13 +495,13 @@ export const Header: React.FC = () => {
         {/* Save prompt modal */}
         {showSavePrompt && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-            <div className="bg-slate-800 border border-slate-600 rounded-xl p-6 max-w-sm w-full shadow-2xl">
-              <h3 className="text-base font-bold text-white mb-2">Save before sharing?</h3>
-              <p className="text-slate-300 text-sm mb-5">You need to save this stage plot before you can share it.</p>
+            <div className="bg-white border border-slate-200 rounded-xl p-6 max-w-sm w-full shadow-2xl">
+              <h3 className="text-base font-bold text-slate-900 mb-2">Save before sharing?</h3>
+              <p className="text-slate-600 text-sm mb-5">You need to save this stage plot before you can share it.</p>
               <div className="flex justify-end gap-2">
                 <button
                   onClick={() => setShowSavePrompt(false)}
-                  className="px-4 py-2 rounded text-slate-400 hover:text-white hover:bg-slate-700 text-sm transition-colors"
+                  className="px-4 py-2 rounded text-slate-500 hover:text-slate-900 hover:bg-slate-100 text-sm transition-colors"
                 >
                   Cancel
                 </button>
@@ -526,24 +526,24 @@ export const Header: React.FC = () => {
   // Landing page header
   if (isLanding) {
     return (
-      <nav className="no-print bg-slate-950 border-b border-slate-800/50 sticky top-0 z-50">
+      <nav className="no-print bg-white border-b border-slate-200/70 sticky top-0 z-50">
         <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
           {/* Logo */}
           <div className="flex items-center gap-2 cursor-pointer" onClick={handleLogoClick}>
             <div className="bg-indigo-600 p-1.5 rounded-lg">
               <Mic2 className="w-5 h-5 text-white" />
             </div>
-            <span className="text-xl font-bold tracking-tight">
+            <span className="text-xl font-bold tracking-tight text-slate-900">
               Miked<span className="text-indigo-500">.live</span>
             </span>
           </div>
 
           {/* Navigation */}
-          <div className="hidden md:flex items-center gap-6 text-sm font-medium text-slate-400">
-            <a href="#features" className="hover:text-indigo-400 transition-colors">Features</a>
-            <a href="#how-it-works" className="hover:text-indigo-400 transition-colors">How it Works</a>
-            <a href="/changelog" className="hover:text-indigo-400 transition-colors">Changelog</a>
-            <a href="/contact" className="hover:text-indigo-400 transition-colors">Contact</a>
+          <div className="hidden md:flex items-center gap-6 text-sm font-medium text-slate-500">
+            <a href="#features" className="hover:text-indigo-500 transition-colors">Features</a>
+            <a href="#how-it-works" className="hover:text-indigo-500 transition-colors">How it Works</a>
+            <a href="/changelog" className="hover:text-indigo-500 transition-colors">Changelog</a>
+            <a href="/contact" className="hover:text-indigo-500 transition-colors">Contact</a>
             <button
               onClick={handleStart}
               className="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium h-9 px-4 rounded-md transition-colors"
@@ -551,9 +551,9 @@ export const Header: React.FC = () => {
               Start Now
             </button>
           </div>
-          <div className="md:hidden flex items-center gap-3 text-xs font-medium text-slate-400">
-            <a href="/changelog" className="hover:text-indigo-400 transition-colors">Changelog</a>
-            <a href="/contact" className="hover:text-indigo-400 transition-colors">Contact</a>
+          <div className="md:hidden flex items-center gap-3 text-xs font-medium text-slate-500">
+            <a href="/changelog" className="hover:text-indigo-500 transition-colors">Changelog</a>
+            <a href="/contact" className="hover:text-indigo-500 transition-colors">Contact</a>
             <button
               onClick={handleStart}
               className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-medium h-8 px-3 rounded-md transition-colors"
@@ -568,7 +568,7 @@ export const Header: React.FC = () => {
 
   // Dashboard and other pages header
   return (
-    <nav className="no-print bg-slate-950 border-b border-slate-800/50 sticky top-0 z-50">
+    <nav className="no-print bg-white border-b border-slate-200/70 sticky top-0 z-50">
       <div className="px-4 h-16 flex items-center gap-3">
         {/* Logo */}
         <div className="flex items-center gap-2 shrink-0">
@@ -585,17 +585,17 @@ export const Header: React.FC = () => {
           <div ref={userMenuRef} className="relative">
             <button
               onClick={() => setUserMenuOpen(!userMenuOpen)}
-              className="flex items-center gap-2 px-2 py-1 hover:bg-slate-800 rounded transition-colors"
+              className="flex items-center gap-2 px-2 py-1 hover:bg-slate-100 rounded transition-colors"
               title="User menu"
             >
-              <UserCircle size={20} className="text-slate-300" />
+              <UserCircle size={20} className="text-slate-500" />
             </button>
 
             {userMenuOpen && (
-              <div className="absolute right-0 top-full mt-2 w-48 bg-slate-900 border border-slate-700 rounded-lg shadow-2xl z-50">
-                <div className="p-3 border-b border-slate-700">
-                  <p className="text-xs text-slate-500">Signed in as</p>
-                  <p className="text-xs text-slate-300 font-medium truncate">{user.email}</p>
+              <div className="absolute right-0 top-full mt-2 w-48 bg-white border border-slate-200 rounded-lg shadow-2xl z-50">
+                <div className="p-3 border-b border-slate-200">
+                  <p className="text-xs text-slate-400">Signed in as</p>
+                  <p className="text-xs text-slate-700 font-medium truncate">{user.email}</p>
                 </div>
                 <button
                   onClick={async () => {
@@ -611,7 +611,7 @@ export const Header: React.FC = () => {
                     }
                   }}
                   disabled={signingOut}
-                  className="w-full text-left px-3 py-2 text-xs text-slate-300 hover:text-white hover:bg-slate-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                  className="w-full text-left px-3 py-2 text-xs text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                 >
                   <LogOut size={13} />
                   {signingOut ? 'Signing out...' : 'Sign out'}

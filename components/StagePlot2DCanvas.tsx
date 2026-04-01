@@ -1094,17 +1094,17 @@ export const StagePlot2DCanvas: React.FC<StagePlot2DCanvasProps> = ({
 
       {/* Multi-selection toolbar */}
       {selectedIds.size > 1 && editable && (
-        <div className="absolute top-2 left-1/2 -translate-x-1/2 flex items-center gap-1.5 bg-slate-900/95 backdrop-blur border border-slate-700 rounded-lg px-3 py-1.5 shadow-xl z-10 pointer-events-auto">
-          <span className="text-xs text-slate-400 font-medium mr-1">{selectedIds.size} selected</span>
-          <button onClick={() => rotateSelectedItems('left')} className="p-1.5 hover:bg-slate-700 rounded transition-colors" title="Rotate group left">
-            <RotateCcw size={13} className="text-slate-300" />
+        <div className="absolute top-2 left-1/2 -translate-x-1/2 flex items-center gap-1.5 bg-white/95 backdrop-blur border border-slate-200 rounded-lg px-3 py-1.5 shadow-xl z-10 pointer-events-auto">
+          <span className="text-xs text-slate-500 font-medium mr-1">{selectedIds.size} selected</span>
+          <button onClick={() => rotateSelectedItems('left')} className="p-1.5 hover:bg-slate-100 rounded transition-colors" title="Rotate group left">
+            <RotateCcw size={13} className="text-slate-600" />
           </button>
-          <button onClick={() => rotateSelectedItems('right')} className="p-1.5 hover:bg-slate-700 rounded transition-colors" title="Rotate group right">
-            <RotateCw size={13} className="text-slate-300" />
+          <button onClick={() => rotateSelectedItems('right')} className="p-1.5 hover:bg-slate-100 rounded transition-colors" title="Rotate group right">
+            <RotateCw size={13} className="text-slate-600" />
           </button>
-          <div className="w-px h-4 bg-slate-700 mx-0.5" />
-          <button onClick={deleteSelected} className="p-1.5 hover:bg-red-900/50 rounded transition-colors" title="Delete all selected">
-            <Trash2 size={13} className="text-red-400" />
+          <div className="w-px h-4 bg-slate-200 mx-0.5" />
+          <button onClick={deleteSelected} className="p-1.5 hover:bg-red-50 rounded transition-colors" title="Delete all selected">
+            <Trash2 size={13} className="text-red-500" />
           </button>
         </div>
       )}
@@ -1113,7 +1113,7 @@ export const StagePlot2DCanvas: React.FC<StagePlot2DCanvasProps> = ({
       {selectedItem && editable && menuBarPos && (
         <div
           ref={menuBarRef}
-          className="absolute flex items-center gap-0.5 bg-slate-900/95 backdrop-blur border border-slate-700 rounded-lg px-2 py-1 shadow-xl z-10 pointer-events-auto"
+          className="absolute flex items-center gap-0.5 bg-white/95 backdrop-blur border border-slate-200 rounded-lg px-2 py-1 shadow-xl z-10 pointer-events-auto"
           style={{
             left: `${menuBarPos.left}px`,
             top: `${menuBarPos.top}px`,
@@ -1141,44 +1141,44 @@ export const StagePlot2DCanvas: React.FC<StagePlot2DCanvasProps> = ({
                   setEditingLabel(null);
                 }
               }}
-              className="text-xs bg-slate-800 border border-slate-600 rounded px-2 py-0.5 text-slate-300 focus:outline-none focus:border-slate-500 max-w-[120px] mr-2"
+              className="text-xs bg-slate-50 border border-slate-300 rounded px-2 py-0.5 text-slate-700 focus:outline-none focus:border-slate-400 max-w-[120px] mr-2"
               autoFocus
             />
           ) : (
             <>
-              <span className="text-xs text-slate-300 mr-2 max-w-[120px] truncate font-medium">{selectedItem.label || 'Item'}</span>
-              <button onClick={startEditLabel} className="p-1.5 hover:bg-slate-700 rounded transition-colors" title="Edit label">
-                <Edit size={13} className="text-slate-300" />
+              <span className="text-xs text-slate-600 mr-2 max-w-[120px] truncate font-medium">{selectedItem.label || 'Item'}</span>
+              <button onClick={startEditLabel} className="p-1.5 hover:bg-slate-100 rounded transition-colors" title="Edit label">
+                <Edit size={13} className="text-slate-500" />
               </button>
             </>
           )}
-          <button onClick={() => rotateSelectedItems('left')} className="p-1.5 hover:bg-slate-700 rounded transition-colors" title="Rotate left">
-            <RotateCcw size={13} className="text-slate-300" />
+          <button onClick={() => rotateSelectedItems('left')} className="p-1.5 hover:bg-slate-100 rounded transition-colors" title="Rotate left">
+            <RotateCcw size={13} className="text-slate-500" />
           </button>
-          <button onClick={() => rotateSelectedItems('right')} className="p-1.5 hover:bg-slate-700 rounded transition-colors" title="Rotate right">
-            <RotateCw size={13} className="text-slate-300" />
+          <button onClick={() => rotateSelectedItems('right')} className="p-1.5 hover:bg-slate-100 rounded transition-colors" title="Rotate right">
+            <RotateCw size={13} className="text-slate-500" />
           </button>
           {selectedItem.type === 'power' && (
             <>
-              <div className="w-px h-4 bg-slate-700 mx-1" />
-              <button onClick={() => updateSocketCount(-1)} className="p-1.5 hover:bg-slate-700 rounded transition-colors" title="Remove socket">
-                <Minus size={13} className="text-slate-300" />
+              <div className="w-px h-4 bg-slate-200 mx-1" />
+              <button onClick={() => updateSocketCount(-1)} className="p-1.5 hover:bg-slate-100 rounded transition-colors" title="Remove socket">
+                <Minus size={13} className="text-slate-500" />
               </button>
-              <button onClick={() => updateSocketCount(1)} className="p-1.5 hover:bg-slate-700 rounded transition-colors" title="Add socket">
-                <Plus size={13} className="text-slate-300" />
+              <button onClick={() => updateSocketCount(1)} className="p-1.5 hover:bg-slate-100 rounded transition-colors" title="Add socket">
+                <Plus size={13} className="text-slate-500" />
               </button>
             </>
           )}
-          <div className="w-px h-4 bg-slate-700 mx-1" />
-          <button onClick={() => onMoveToFront?.(selectedItem.id)} className="p-1.5 hover:bg-slate-700 rounded transition-colors" title="Bring to front">
-            <ArrowUp size={13} className="text-slate-300" />
+          <div className="w-px h-4 bg-slate-200 mx-1" />
+          <button onClick={() => onMoveToFront?.(selectedItem.id)} className="p-1.5 hover:bg-slate-100 rounded transition-colors" title="Bring to front">
+            <ArrowUp size={13} className="text-slate-500" />
           </button>
-          <button onClick={() => onMoveToBack?.(selectedItem.id)} className="p-1.5 hover:bg-slate-700 rounded transition-colors" title="Send to back">
-            <ArrowDown size={13} className="text-slate-300" />
+          <button onClick={() => onMoveToBack?.(selectedItem.id)} className="p-1.5 hover:bg-slate-100 rounded transition-colors" title="Send to back">
+            <ArrowDown size={13} className="text-slate-500" />
           </button>
-          <div className="w-px h-4 bg-slate-700 mx-1" />
-          <button onClick={deleteSelected} className="p-1.5 hover:bg-red-900/50 rounded transition-colors" title="Delete">
-            <Trash2 size={13} className="text-red-400" />
+          <div className="w-px h-4 bg-slate-200 mx-1" />
+          <button onClick={deleteSelected} className="p-1.5 hover:bg-red-50 rounded transition-colors" title="Delete">
+            <Trash2 size={13} className="text-red-500" />
           </button>
         </div>
       )}

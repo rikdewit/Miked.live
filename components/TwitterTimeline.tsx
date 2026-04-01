@@ -19,12 +19,12 @@ export const TwitterTimeline = () => {
         href="https://x.com/WoesNos"
         target="_blank"
         rel="noopener noreferrer"
-        className="inline-flex items-center gap-3 text-indigo-300 hover:text-indigo-200 transition-colors"
+        className="inline-flex items-center gap-3 text-indigo-500 hover:text-indigo-600 transition-colors"
       >
         <XIcon size={32} />
         <span className="text-lg font-semibold">@WoesNos</span>
       </a>
-      <p className="text-sm text-slate-400 text-center">
+      <p className="text-sm text-slate-500 text-center">
         Follow me on X to see my latest tweets and updates
       </p>
     </div>

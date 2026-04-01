@@ -8,7 +8,7 @@ import { UnsubscribeContent } from './UnsubscribeContent'
 
 function UnsubscribeLoading() {
   return (
-    <div className="flex flex-col w-full bg-gradient-to-b from-slate-900 via-slate-900 to-slate-950 text-slate-100 relative min-h-screen">
+    <div className="flex flex-col w-full bg-white text-slate-900 relative min-h-screen">
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-20 -right-32 w-96 h-96 bg-purple-500/20 rounded-full blur-3xl"></div>
         <div className="absolute -top-40 -left-40 w-80 h-80 bg-indigo-500/10 rounded-full blur-3xl"></div>
@@ -24,12 +24,12 @@ function UnsubscribeLoading() {
           showBadge={false}
           titleColor="indigo"
         />
-        <div className="mt-12 bg-slate-900/50 backdrop-blur-sm border border-slate-800 rounded-2xl p-8 shadow-lg">
+        <div className="mt-12 bg-slate-50 border border-slate-200 rounded-2xl p-8 shadow-lg">
           <div className="text-center space-y-4">
             <div className="animate-spin inline-block">
               <div className="h-8 w-8 border-4 border-indigo-500 border-t-indigo-200 rounded-full"></div>
             </div>
-            <p className="text-slate-300">Loading...</p>
+            <p className="text-slate-600">Loading...</p>
           </div>
         </div>
       </div>

@@ -80,9 +80,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[2000] p-4">
-      <div className="bg-slate-900 rounded-lg shadow-lg max-w-md w-full border border-slate-700">
+      <div className="bg-white rounded-lg shadow-lg max-w-md w-full border border-slate-200">
         {/* Header */}
-        <div className="flex justify-between items-center p-6 border-b border-slate-700">
+        <div className="flex justify-between items-center p-6 border-b border-slate-200">
           <div className="flex gap-2">
             <button
               onClick={() => {
@@ -90,19 +90,19 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 setError('')
               }}
               className={`text-sm font-medium transition-colors ${
-                isSignUp ? 'text-white' : 'text-slate-400 hover:text-slate-300'
+                isSignUp ? 'text-slate-900' : 'text-slate-500 hover:text-slate-700'
               }`}
             >
               Create account
             </button>
-            <span className="text-slate-600">|</span>
+            <span className="text-slate-300">|</span>
             <button
               onClick={() => {
                 setIsSignUp(false)
                 setError('')
               }}
               className={`text-sm font-medium transition-colors ${
-                !isSignUp ? 'text-white' : 'text-slate-400 hover:text-slate-300'
+                !isSignUp ? 'text-slate-900' : 'text-slate-500 hover:text-slate-700'
               }`}
             >
               Sign in
@@ -110,7 +110,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           </div>
           <button
             onClick={onClose}
-            className="text-slate-600 hover:text-slate-400 transition"
+            className="text-slate-300 hover:text-slate-500 transition"
             disabled={isLoading}
           >
             <X size={20} />
@@ -120,14 +120,14 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         {/* Content */}
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           <div>
-            <p className="text-sm text-slate-300 mb-4">
+            <p className="text-sm text-slate-600 mb-4">
               Save and share your stage plot
             </p>
           </div>
 
           {/* Email */}
           <div>
-            <label className="block text-xs font-medium text-slate-400 mb-1.5">
+            <label className="block text-xs font-medium text-slate-500 mb-1.5">
               Email
             </label>
             <input
@@ -136,14 +136,14 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               onChange={(e) => setEmail(e.target.value)}
               placeholder="your.email@example.com"
               disabled={isLoading}
-              className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded text-sm text-white placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
               required
             />
           </div>
 
           {/* Password */}
           <div>
-            <label className="block text-xs font-medium text-slate-400 mb-1.5">
+            <label className="block text-xs font-medium text-slate-500 mb-1.5">
               Password
             </label>
             <input
@@ -152,7 +152,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
               disabled={isLoading}
-              className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded text-sm text-white placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
               required
               minLength={6}
             />
@@ -161,7 +161,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           {/* Confirm Password (sign-up only) */}
           {isSignUp && (
             <div>
-              <label className="block text-xs font-medium text-slate-400 mb-1.5">
+              <label className="block text-xs font-medium text-slate-500 mb-1.5">
                 Confirm password
               </label>
               <input
@@ -170,7 +170,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 placeholder="••••••••"
                 disabled={isLoading}
-                className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded text-sm text-white placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                 required
                 minLength={6}
               />
@@ -179,7 +179,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
           {/* Error message */}
           {error && (
-            <div className="px-3 py-2 bg-red-900/30 border border-red-800 rounded text-xs text-red-300">
+            <div className="px-3 py-2 bg-red-50 border border-red-300 rounded text-xs text-red-600">
               {error}
             </div>
           )}
@@ -203,7 +203,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           </button>
 
           {/* Info text */}
-          <p className="text-xs text-slate-500 text-center mt-4">
+          <p className="text-xs text-slate-400 text-center mt-4">
             {isSignUp
               ? 'Create an account to save and share your stage plot'
               : 'Sign in to access your saved stage plots'}

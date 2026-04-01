@@ -72,7 +72,7 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body className="bg-slate-900 text-slate-100">
+      <body className="bg-white text-slate-900">
         <StagePlotProvider>
           <PHProvider>
             <PageViewTracker />

@@ -62,12 +62,12 @@ export const EmailSubscribe: React.FC<EmailSubscribeProps> = ({
       <div className="hidden md:block w-24 flex-shrink-0"></div>
 
       {/* Email subscribe content */}
-      <div className="flex-1 pt-8 border-t border-slate-800 bg-gradient-to-br from-purple-900/30 to-slate-900/50 backdrop-blur-sm rounded-2xl p-8 hover:border-purple-500/30 transition-colors shadow-lg border border-slate-800">
+      <div className="flex-1 pt-8 border-t border-slate-200 bg-gradient-to-br from-purple-50/50 to-slate-50 backdrop-blur-sm rounded-2xl p-8 hover:border-purple-300/50 transition-colors shadow-lg border border-slate-200">
         <div className="flex items-start gap-3 mb-4">
-          <Mail className="w-6 h-6 text-purple-400 flex-shrink-0 mt-1" />
+          <Mail className="w-6 h-6 text-purple-500 flex-shrink-0 mt-1" />
           <div>
-            <p className="text-lg font-extrabold text-slate-100">{title}</p>
-            <p className="text-sm text-slate-400 mt-1">{description}</p>
+            <p className="text-lg font-extrabold text-slate-900">{title}</p>
+            <p className="text-sm text-slate-500 mt-1">{description}</p>
           </div>
         </div>
 
@@ -78,7 +78,7 @@ export const EmailSubscribe: React.FC<EmailSubscribeProps> = ({
             onChange={(e) => setEmail(e.target.value)}
             placeholder={placeholder}
             disabled={isLoading || isSuccess}
-            className="flex-1 px-4 py-3 rounded-lg bg-slate-900/50 border border-slate-700 text-slate-100 placeholder-slate-500 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-colors disabled:opacity-50"
+            className="flex-1 px-4 py-3 rounded-lg bg-white border border-slate-300 text-slate-900 placeholder-slate-400 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-colors disabled:opacity-50"
           />
           <button
             type="submit"

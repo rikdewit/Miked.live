@@ -34,7 +34,7 @@ export default function ChangelogPage() {
   const posts = getChangelogPosts()
 
   return (
-    <div className="flex flex-col w-full bg-gradient-to-b from-slate-900 via-slate-900 to-slate-950 text-slate-100 relative">
+    <div className="flex flex-col w-full bg-white text-slate-900 relative">
       {/* Gradient orbs */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-20 -right-32 w-96 h-96 bg-purple-500/20 rounded-full blur-3xl"></div>
@@ -67,25 +67,25 @@ export default function ChangelogPage() {
             {/* Hidden date column for alignment - matches post layout */}
             <div className="hidden md:block w-24 flex-shrink-0"></div>
             {/* Feedback content */}
-            <div className="flex-1 pt-8 border-t border-slate-800 bg-slate-900/50 backdrop-blur-sm rounded-2xl p-8 hover:border-indigo-500/30 transition-colors shadow-lg">
-              <p className="text-lg font-extrabold text-slate-100 mb-4">I'm building this in public and I'd love your feedback!</p>
+            <div className="flex-1 pt-8 border-t border-slate-200 bg-slate-50 rounded-2xl p-8 hover:border-indigo-300/50 transition-colors shadow-lg">
+              <p className="text-lg font-extrabold text-slate-900 mb-4">I'm building this in public and I'd love your feedback!</p>
               <a
                 href="https://chat.whatsapp.com/JW37b8r65X1AyAGYPRt1NG"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 text-sm font-medium text-indigo-300 hover:text-indigo-200 transition-colors bg-indigo-500/10 hover:bg-indigo-500/20 px-4 py-2 rounded-lg mb-4"
+                className="inline-flex items-center gap-2 text-sm font-medium text-indigo-600 hover:text-indigo-700 transition-colors bg-indigo-50 hover:bg-indigo-100 px-4 py-2 rounded-lg mb-4"
               >
                 <span>Join the WhatsApp community</span>
                 <span>↗</span>
               </a>
-              <p className="text-xs text-slate-400 mb-4">Share ideas, feedback, and feature requests with me directly</p>
+              <p className="text-xs text-slate-500 mb-4">Share ideas, feedback, and feature requests with me directly</p>
               <div className="flex items-center gap-3">
-                <span className="text-xs text-slate-400">Or follow me:</span>
+                <span className="text-xs text-slate-500">Or follow me:</span>
                 <a
                   href="https://twitter.com/Woesnos"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 text-slate-400 hover:text-indigo-300 transition-colors"
+                  className="inline-flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 text-slate-400 hover:text-indigo-500 transition-colors"
                   title="X"
                 >
                   <div className="sm:hidden">
@@ -99,7 +99,7 @@ export default function ChangelogPage() {
                   href="https://instagram.com/woesnos"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 text-slate-400 hover:text-indigo-300 transition-colors"
+                  className="inline-flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 text-slate-400 hover:text-indigo-500 transition-colors"
                   title="Instagram"
                 >
                   <Instagram size={24} className="sm:hidden" />
@@ -112,7 +112,7 @@ export default function ChangelogPage() {
           {/* Posts */}
           {posts.length === 0 ? (
             <div className="text-center py-12">
-              <p className="text-slate-400">No updates yet. Check back soon!</p>
+              <p className="text-slate-500">No updates yet. Check back soon!</p>
             </div>
           ) : (
             posts.map((post, index) => {
@@ -127,30 +127,30 @@ export default function ChangelogPage() {
                   {/* Sticky Date - Hidden on small screens */}
                   <div className="hidden md:block w-24 flex-shrink-0 sticky top-32 h-fit">
                     <div className="text-center">
-                      <div className="text-xs font-bold text-indigo-300 mb-2 opacity-75">#{posts.length - index}</div>
-                      <time className="text-lg font-bold text-indigo-400">{date.getDate()}</time>
-                      <p className="text-xs text-slate-400 uppercase tracking-wide">
+                      <div className="text-xs font-bold text-indigo-400 mb-2 opacity-75">#{posts.length - index}</div>
+                      <time className="text-lg font-bold text-indigo-500">{date.getDate()}</time>
+                      <p className="text-xs text-slate-500 uppercase tracking-wide">
                         {date.toLocaleDateString('en-US', { month: 'short' })}
-                        {!isCurrentYear && <span className="block text-xs mt-1 text-slate-500">{date.getFullYear()}</span>}
+                        {!isCurrentYear && <span className="block text-xs mt-1 text-slate-400">{date.getFullYear()}</span>}
                       </p>
                     </div>
                   </div>
 
                   {/* Post Content */}
-                  <article className="flex-1 bg-slate-900/50 backdrop-blur-sm border border-slate-800 rounded-2xl p-8 pt-12 hover:border-indigo-500/30 transition-colors shadow-lg">
+                  <article className="flex-1 bg-slate-50 border border-slate-200 rounded-2xl p-8 pt-12 hover:border-indigo-300/50 transition-colors shadow-lg">
                     {/* Date and number for small screens */}
-                    <div className="md:hidden flex items-center gap-4 mb-4 pb-4 border-b border-white/10">
+                    <div className="md:hidden flex items-center gap-4 mb-4 pb-4 border-b border-slate-200">
                       <div className="text-center">
-                        <div className="text-xs font-bold text-indigo-300 opacity-75">#{posts.length - index}</div>
-                        <time className="text-sm font-bold text-indigo-400">{date.getDate()}</time>
-                        <p className="text-xs text-slate-400 uppercase tracking-wide">
+                        <div className="text-xs font-bold text-indigo-400 opacity-75">#{posts.length - index}</div>
+                        <time className="text-sm font-bold text-indigo-500">{date.getDate()}</time>
+                        <p className="text-xs text-slate-500 uppercase tracking-wide">
                           {date.toLocaleDateString('en-US', { month: 'short' })}
-                          {!isCurrentYear && <span className="block text-xs text-slate-500">{date.getFullYear()}</span>}
+                          {!isCurrentYear && <span className="block text-xs text-slate-400">{date.getFullYear()}</span>}
                         </p>
                       </div>
                     </div>
                     <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-4">{post.title}</h2>
-                    <p className="text-base sm:text-lg text-slate-300 mb-6">{post.description}</p>
+                    <p className="text-base sm:text-lg text-slate-600 mb-6">{post.description}</p>
                     {post.image && (
                       <img
                         src={post.image}
@@ -158,7 +158,7 @@ export default function ChangelogPage() {
                         className="w-full rounded-lg mb-8 border border-white/10"
                       />
                     )}
-                  <div className="max-w-none text-base sm:text-lg text-slate-300 space-y-4">
+                  <div className="max-w-none text-base sm:text-lg text-slate-600 space-y-4">
                     {parseMarkdown(post.content).map((node, i) => {
                       if (node.type === 'paragraph') {
                         return (
@@ -166,7 +166,7 @@ export default function ChangelogPage() {
                             {Array.isArray(node.content) &&
                               node.content.map((inline, j) =>
                                 inline.type === 'bold' ? (
-                                  <strong key={j} className="font-bold text-white">
+                                  <strong key={j} className="font-bold text-slate-900">
                                     {inline.content}
                                   </strong>
                                 ) : (
@@ -177,7 +177,7 @@ export default function ChangelogPage() {
                         )
                       } else if (node.type === 'heading') {
                         return (
-                          <h3 key={i} className="text-xl font-bold text-white mt-6 mb-3">
+                          <h3 key={i} className="text-xl font-bold text-slate-900 mt-6 mb-3">
                             {Array.isArray(node.content) &&
                               node.content.map((inline, j) =>
                                 inline.type === 'bold' ? (
@@ -195,11 +195,11 @@ export default function ChangelogPage() {
                           <ul key={i} className="list-disc list-inside space-y-2 ml-2">
                             {Array.isArray(node.content) &&
                               node.content.map((item, j) => (
-                                <li key={j} className="text-slate-300">
+                                <li key={j} className="text-slate-600">
                                   {Array.isArray(item) &&
                                     item.map((inline, k) =>
                                       inline.type === 'bold' ? (
-                                        <strong key={k} className="font-bold text-white">
+                                        <strong key={k} className="font-bold text-slate-900">
                                           {inline.content}
                                         </strong>
                                       ) : (

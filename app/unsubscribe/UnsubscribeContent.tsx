@@ -90,7 +90,7 @@ export function UnsubscribeContent() {
   }
 
   return (
-    <div className="flex flex-col w-full bg-gradient-to-b from-slate-900 via-slate-900 to-slate-950 text-slate-100 relative min-h-screen">
+    <div className="flex flex-col w-full bg-white text-slate-900 relative min-h-screen">
       {/* Gradient orbs */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-20 -right-32 w-96 h-96 bg-purple-500/20 rounded-full blur-3xl"></div>
@@ -109,47 +109,47 @@ export function UnsubscribeContent() {
           titleColor="indigo"
         />
 
-        <div className="mt-12 bg-slate-900/50 backdrop-blur-sm border border-slate-800 rounded-2xl p-8 shadow-lg">
+        <div className="mt-12 bg-slate-50 border border-slate-200 rounded-2xl p-8 shadow-lg">
           {isLoading ? (
             <div className="text-center space-y-4">
               <div className="animate-spin inline-block">
                 <div className="h-8 w-8 border-4 border-indigo-500 border-t-indigo-200 rounded-full"></div>
               </div>
-              <p className="text-slate-300">Loading...</p>
+              <p className="text-slate-600">Loading...</p>
             </div>
           ) : !email && !token ? (
             <div className="text-center space-y-4">
               <AlertCircle className="w-12 h-12 text-amber-400 mx-auto" />
-              <p className="text-lg font-semibold text-slate-100">
+              <p className="text-lg font-semibold text-slate-900">
                 Invalid unsubscribe link
               </p>
               <p className="text-sm text-slate-400">
                 The unsubscribe link appears to be incomplete. Please check your email or{' '}
-                <Link href="/changelog" className="text-indigo-400 hover:text-indigo-300">
+                <Link href="/changelog" className="text-indigo-500 hover:text-indigo-600">
                   go back to the changelog
                 </Link>
               </p>
             </div>
           ) : isAlreadyUnsubscribed ? (
             <div className="text-center space-y-4">
-              <AlertCircle className="w-12 h-12 text-slate-500 mx-auto" />
-              <p className="text-lg font-semibold text-slate-100">
+              <AlertCircle className="w-12 h-12 text-slate-400 mx-auto" />
+              <p className="text-lg font-semibold text-slate-900">
                 Already unsubscribed
               </p>
               <p className="text-sm text-slate-400">
                 This email is not currently subscribed to the Miked.live changelog.
               </p>
-              <div className="border-t border-slate-800 pt-6">
+              <div className="border-t border-slate-200 pt-6">
                 <div className="flex gap-3">
                   <Link
                     href="/"
-                    className="flex-1 px-4 py-2 rounded-lg bg-indigo-500/20 text-indigo-300 hover:bg-indigo-500/30 text-center font-medium transition-colors"
+                    className="flex-1 px-4 py-2 rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-100 text-center font-medium transition-colors"
                   >
                     Return home
                   </Link>
                   <Link
                     href="/changelog"
-                    className="flex-1 px-4 py-2 rounded-lg bg-slate-700/50 text-slate-200 hover:bg-slate-700 text-center font-medium transition-colors"
+                    className="flex-1 px-4 py-2 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 text-center font-medium transition-colors"
                   >
                     View changelog
                   </Link>
@@ -164,7 +164,7 @@ export function UnsubscribeContent() {
                 </div>
               </div>
               <div className="text-center space-y-2">
-                <p className="text-lg font-semibold text-slate-100">
+                <p className="text-lg font-semibold text-slate-900">
                   Successfully unsubscribed
                 </p>
                 <p className="text-sm text-slate-400">
@@ -172,20 +172,20 @@ export function UnsubscribeContent() {
                 </p>
               </div>
 
-              <div className="border-t border-slate-800 pt-6">
-                <p className="text-xs text-slate-500 text-center mb-4">
+              <div className="border-t border-slate-200 pt-6">
+                <p className="text-xs text-slate-400 text-center mb-4">
                   Note: You'll still receive important transactional emails, like magic links for rider access.
                 </p>
                 <div className="flex gap-3">
                   <Link
                     href="/"
-                    className="flex-1 px-4 py-2 rounded-lg bg-indigo-500/20 text-indigo-300 hover:bg-indigo-500/30 text-center font-medium transition-colors"
+                    className="flex-1 px-4 py-2 rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-100 text-center font-medium transition-colors"
                   >
                     Return home
                   </Link>
                   <Link
                     href="/changelog"
-                    className="flex-1 px-4 py-2 rounded-lg bg-slate-700/50 text-slate-200 hover:bg-slate-700 text-center font-medium transition-colors"
+                    className="flex-1 px-4 py-2 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 text-center font-medium transition-colors"
                   >
                     View changelog
                   </Link>
@@ -194,12 +194,12 @@ export function UnsubscribeContent() {
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-6">
-              <p className="text-sm text-slate-300">
+              <p className="text-sm text-slate-600">
                 You're about to unsubscribe from the Miked.live changelog. This only removes you from our email list—you'll still receive important transactional emails if you have a rider saved.
               </p>
 
               <div className="space-y-2">
-                <label htmlFor="email" className="block text-sm font-medium text-slate-200">
+                <label htmlFor="email" className="block text-sm font-medium text-slate-800">
                   Email address
                 </label>
                 <input
@@ -209,13 +209,13 @@ export function UnsubscribeContent() {
                   onChange={(e) => setEmail(e.target.value)}
                   disabled={!!token}
                   placeholder="Enter your email"
-                  className={`w-full px-4 py-3 rounded-lg bg-slate-800/50 border border-slate-700 text-slate-300 placeholder-slate-500 ${
+                  className={`w-full px-4 py-3 rounded-lg bg-white border border-slate-300 text-slate-900 placeholder-slate-400 ${
                     token
                       ? 'disabled:opacity-100 cursor-not-allowed'
                       : 'focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500'
                   }`}
                 />
-                <p className="text-xs text-slate-500">
+                <p className="text-xs text-slate-400">
                   {token
                     ? '✓ This email address is verified from your secure unsubscribe link.'
                     : 'This email address is verified from your unsubscribe link.'}
@@ -223,9 +223,9 @@ export function UnsubscribeContent() {
               </div>
 
               {error && (
-                <div className="flex items-center gap-2 p-3 rounded-lg bg-red-500/10 border border-red-500/20">
-                  <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0" />
-                  <p className="text-sm text-red-300">{error}</p>
+                <div className="flex items-center gap-2 p-3 rounded-lg bg-red-50 border border-red-300">
+                  <AlertCircle className="w-4 h-4 text-red-500 flex-shrink-0" />
+                  <p className="text-sm text-red-600">{error}</p>
                 </div>
               )}
 
@@ -244,10 +244,10 @@ export function UnsubscribeContent() {
                 )}
               </button>
 
-              <div className="border-t border-slate-800 pt-6">
-                <p className="text-xs text-slate-500 text-center">
+              <div className="border-t border-slate-200 pt-6">
+                <p className="text-xs text-slate-400 text-center">
                   Having second thoughts?{' '}
-                  <Link href="/changelog" className="text-indigo-400 hover:text-indigo-300">
+                  <Link href="/changelog" className="text-indigo-500 hover:text-indigo-600">
                     Go back to changelog
                   </Link>
                 </p>

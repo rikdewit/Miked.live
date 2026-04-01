@@ -29,7 +29,7 @@ export const metadata = {
 
 export default function ContactPage() {
   return (
-    <div className="flex flex-col w-full bg-gradient-to-b from-slate-900 via-slate-900 to-slate-950 text-slate-100 relative">
+    <div className="flex flex-col w-full bg-white text-slate-900 relative">
       {/* Gradient orbs */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-20 -right-32 w-96 h-96 bg-purple-500/20 rounded-full blur-3xl"></div>
@@ -55,18 +55,18 @@ export default function ContactPage() {
         {/* Contact Block */}
         <div className="flex justify-center">
           <div className="w-full max-w-2xl">
-            <div className="pt-8 border-t border-slate-800 bg-slate-900/50 backdrop-blur-sm rounded-2xl p-8 hover:border-indigo-500/30 transition-colors shadow-lg">
-              <p className="text-lg font-extrabold text-slate-100 mb-4">I'm building this in public and I'd love your feedback!</p>
+            <div className="pt-8 border-t border-slate-200 bg-slate-50 rounded-2xl p-8 hover:border-indigo-300/50 transition-colors shadow-lg">
+              <p className="text-lg font-extrabold text-slate-900 mb-4">I'm building this in public and I'd love your feedback!</p>
               <a
                 href="https://chat.whatsapp.com/JW37b8r65X1AyAGYPRt1NG"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 text-sm font-medium text-indigo-300 hover:text-indigo-200 transition-colors bg-indigo-500/10 hover:bg-indigo-500/20 px-4 py-2 rounded-lg mb-4"
+                className="inline-flex items-center gap-2 text-sm font-medium text-indigo-600 hover:text-indigo-700 transition-colors bg-indigo-50 hover:bg-indigo-100 px-4 py-2 rounded-lg mb-4"
               >
                 <span>Join the WhatsApp community</span>
                 <span>↗</span>
               </a>
-              <p className="text-xs text-slate-400 mb-4">Share ideas, feedback, and feature requests with me directly</p>
+              <p className="text-xs text-slate-500 mb-4">Share ideas, feedback, and feature requests with me directly</p>
             </div>
           </div>
         </div>
@@ -76,27 +76,27 @@ export default function ContactPage() {
           <div className="w-full max-w-2xl">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               {/* X Timeline */}
-              <div className="pt-8 border-t border-slate-800 bg-slate-900/50 backdrop-blur-sm rounded-2xl p-8 hover:border-indigo-500/30 transition-colors shadow-lg">
-                <h2 className="text-lg font-semibold text-slate-100 mb-4 text-center">Latest on X</h2>
+              <div className="pt-8 border-t border-slate-200 bg-slate-50 rounded-2xl p-8 hover:border-indigo-300/50 transition-colors shadow-lg">
+                <h2 className="text-lg font-semibold text-slate-900 mb-4 text-center">Latest on X</h2>
                 <div className="flex justify-center">
                   <TwitterTimeline />
                 </div>
               </div>
 
               {/* Instagram Profile */}
-              <div className="pt-8 border-t border-slate-800 bg-slate-900/50 backdrop-blur-sm rounded-2xl p-8 hover:border-indigo-500/30 transition-colors shadow-lg">
-                <h2 className="text-lg font-semibold text-slate-100 mb-4 text-center">Latest on Instagram</h2>
+              <div className="pt-8 border-t border-slate-200 bg-slate-50 rounded-2xl p-8 hover:border-indigo-300/50 transition-colors shadow-lg">
+                <h2 className="text-lg font-semibold text-slate-900 mb-4 text-center">Latest on Instagram</h2>
                 <div className="flex flex-col items-center">
                   <a
                     href="https://instagram.com/woesnos"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-3 text-indigo-300 hover:text-indigo-200 transition-colors mb-4"
+                    className="inline-flex items-center gap-3 text-indigo-500 hover:text-indigo-600 transition-colors mb-4"
                   >
                     <Instagram size={32} />
                     <span>@woesnos</span>
                   </a>
-                  <p className="text-sm text-slate-400 text-center">
+                  <p className="text-sm text-slate-500 text-center">
                     Follow me on Instagram to see my latest posts and updates
                   </p>
                 </div>

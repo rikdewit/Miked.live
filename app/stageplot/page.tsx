@@ -341,10 +341,10 @@ function DashboardPageInner() {
   // Show loading screen while loading stageplot by ID
   if (loadStatus === 'loading') {
     return (
-      <div className="flex-1 flex items-center justify-center bg-slate-900">
+      <div className="flex-1 flex items-center justify-center bg-white">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4" />
-          <p className="text-slate-400 text-sm">Loading stage plot…</p>
+          <p className="text-slate-500 text-sm">Loading stage plot…</p>
         </div>
       </div>
     )
@@ -353,11 +353,11 @@ function DashboardPageInner() {
   // Show error screen for not found
   if (loadStatus === 'not_found') {
     return (
-      <div className="flex-1 flex items-center justify-center bg-slate-900 p-4">
-        <div className="bg-white rounded-xl shadow-xl p-8 text-center max-w-sm w-full">
+      <div className="flex-1 flex items-center justify-center bg-white p-4">
+        <div className="bg-white rounded-xl shadow-lg border border-slate-200 p-8 text-center max-w-sm w-full">
           <div className="text-4xl mb-4">🔍</div>
-          <h1 className="text-xl font-bold text-gray-900 mb-2">Stage plot not found</h1>
-          <p className="text-gray-500 text-sm">This stage plot doesn't exist or has been removed.</p>
+          <h1 className="text-xl font-bold text-slate-900 mb-2">Stage plot not found</h1>
+          <p className="text-slate-500 text-sm">This stage plot doesn't exist or has been removed.</p>
         </div>
       </div>
     )
@@ -366,11 +366,11 @@ function DashboardPageInner() {
   // Show error screen for other errors
   if (loadStatus === 'error') {
     return (
-      <div className="flex-1 flex items-center justify-center bg-slate-900 p-4">
-        <div className="bg-white rounded-xl shadow-xl p-8 text-center max-w-sm w-full">
+      <div className="flex-1 flex items-center justify-center bg-white p-4">
+        <div className="bg-white rounded-xl shadow-lg border border-slate-200 p-8 text-center max-w-sm w-full">
           <div className="text-4xl mb-4">⚠️</div>
-          <h1 className="text-xl font-bold text-gray-900 mb-2">Something went wrong</h1>
-          <p className="text-gray-500 text-sm">We couldn't load this stage plot. Please try again.</p>
+          <h1 className="text-xl font-bold text-slate-900 mb-2">Something went wrong</h1>
+          <p className="text-slate-500 text-sm">We couldn't load this stage plot. Please try again.</p>
         </div>
       </div>
     )
@@ -379,17 +379,17 @@ function DashboardPageInner() {
   // ── VIEWER MODE (read-only) ────────────────────────────────────────────────
   if (viewMode === 'viewer' && viewPlotData) {
     return (
-      <div className="fixed inset-0 flex flex-col bg-slate-950 z-40">
+      <div className="fixed inset-0 flex flex-col bg-white z-40">
         {/* Nav bar with viewer info and download */}
-        <nav className="bg-slate-950 border-b border-slate-800/50 px-4 h-16 flex items-center gap-3 shrink-0">
+        <nav className="bg-white border-b border-slate-200/70 px-4 h-16 flex items-center gap-3 shrink-0">
           {viewPlotData?.details?.bandName && (
-            <span className="text-base text-slate-300 truncate">{viewPlotData.details.bandName}</span>
+            <span className="text-base text-slate-600 truncate">{viewPlotData.details.bandName}</span>
           )}
 
           <div className="flex-1" />
 
           {viewCount !== null && (
-            <span className="hidden sm:block text-sm text-slate-600">
+            <span className="hidden sm:block text-sm text-slate-300">
               {viewCount} view{viewCount !== 1 ? 's' : ''}
             </span>
           )}
@@ -398,7 +398,7 @@ function DashboardPageInner() {
           <button
             onClick={handleDownloadPNG}
             disabled={isDownloading}
-            className="flex items-center gap-1.5 px-3 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 hover:text-white rounded text-sm transition-colors disabled:opacity-50 disabled:cursor-wait"
+            className="flex items-center gap-1.5 px-3 py-2 bg-slate-100 hover:bg-slate-200 border border-slate-300 text-slate-600 hover:text-slate-900 rounded text-sm transition-colors disabled:opacity-50 disabled:cursor-wait"
           >
             {isDownloading ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
             Download
@@ -424,7 +424,7 @@ function DashboardPageInner() {
     <div className="flex flex-1 min-h-0 overflow-hidden">
 
       {/* Hidden custom drag label */}
-      <div ref={dragLabelRef} className="absolute top-[-9999px] left-[-9999px] bg-slate-900 text-white text-xs font-bold px-3 py-1.5 rounded-md border border-slate-600 shadow-xl whitespace-nowrap z-50 pointer-events-none">
+      <div ref={dragLabelRef} className="absolute top-[-9999px] left-[-9999px] bg-slate-800 text-white text-xs font-bold px-3 py-1.5 rounded-md border border-slate-600 shadow-xl whitespace-nowrap z-50 pointer-events-none">
         {dragLabelText}
       </div>
 
@@ -547,14 +547,14 @@ function DashboardPageInner() {
       {/* Clear confirm modal */}
       {showClearConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="bg-slate-800 border border-slate-600 rounded-xl p-6 max-w-sm w-full shadow-2xl">
-            <div className="flex items-center gap-3 mb-4 text-red-400">
+          <div className="bg-white border border-slate-200 rounded-xl p-6 max-w-sm w-full shadow-2xl">
+            <div className="flex items-center gap-3 mb-4 text-red-500">
               <AlertTriangle size={22} />
-              <h3 className="text-base font-bold text-white">Clear Stage?</h3>
+              <h3 className="text-base font-bold text-slate-900">Clear Stage?</h3>
             </div>
-            <p className="text-slate-300 text-sm mb-5">All items will be removed from the stage. This cannot be undone.</p>
+            <p className="text-slate-600 text-sm mb-5">All items will be removed from the stage. This cannot be undone.</p>
             <div className="flex justify-end gap-2">
-              <button onClick={() => setShowClearConfirm(false)} className="px-4 py-2 rounded text-slate-400 hover:text-white hover:bg-slate-700 text-sm transition-colors">
+              <button onClick={() => setShowClearConfirm(false)} className="px-4 py-2 rounded text-slate-500 hover:text-slate-900 hover:bg-slate-100 text-sm transition-colors">
                 Cancel
               </button>
               <button

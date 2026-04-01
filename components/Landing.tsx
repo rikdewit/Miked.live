@@ -155,7 +155,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       'inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50';
     const variants = {
       default: 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-lg shadow-indigo-500/20 transition-colors duration-150',
-      outline: 'border border-slate-700 bg-transparent hover:bg-slate-800 text-slate-200 transition-colors duration-150',
+      outline: 'border border-slate-300 bg-transparent hover:bg-slate-100 text-slate-700 transition-colors duration-150',
     };
     const sizes = {
       default: 'h-10 px-4 py-2',
@@ -177,7 +177,7 @@ Button.displayName = 'Button';
 export const Landing: React.FC<LandingProps> = ({ onStart }) => {
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-50 font-sans selection:bg-indigo-500/30">
+    <div className="min-h-screen bg-white text-slate-900 font-sans selection:bg-indigo-500/30">
       {/* Hero Section */}
       <section className="relative min-h-screen flex flex-col items-center justify-center overflow-hidden pb-32 md:pb-56">
         {/* Background Gradients */}
@@ -196,19 +196,19 @@ export const Landing: React.FC<LandingProps> = ({ onStart }) => {
             transition={{ duration: 0.5 }}
             className="text-center max-w-2xl pointer-events-auto"
           >
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-900/80 backdrop-blur-sm border border-slate-800 text-indigo-400 text-xs font-medium mb-6">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/80 backdrop-blur-sm border border-slate-200 text-indigo-500 text-xs font-medium mb-6">
               <span className="relative flex h-2 w-2">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-indigo-500"></span>
               </span>
               No Login Required
             </div>
-            <h1 className="text-3xl md:text-5xl lg:text-6xl font-bold tracking-tight mb-4 bg-clip-text text-transparent bg-gradient-to-b from-white to-slate-300">
+            <h1 className="text-3xl md:text-5xl lg:text-6xl font-bold tracking-tight mb-4 bg-clip-text text-transparent bg-gradient-to-b from-slate-900 to-slate-600">
               Your Band Rider.
               <br />
               <span className="text-indigo-400">Done in 5 Minutes.</span>
             </h1>
-            <p className="text-base md:text-lg text-slate-200 mb-8 leading-relaxed">
+            <p className="text-base md:text-lg text-slate-600 mb-8 leading-relaxed">
               Drag, drop, and download. The fastest way to create professional stage plots and input lists for your next show.
             </p>
             <div className="flex flex-col md:flex-row items-center justify-center gap-4">
@@ -222,7 +222,7 @@ export const Landing: React.FC<LandingProps> = ({ onStart }) => {
               <a href="/riders/bb5bb520-9f9f-4584-b549-da2be1fbff4d?share=f9055408-becc-4e06-a5bf-6a5a4801f0a2" target="_blank" rel="noopener noreferrer" className="pointer-events-auto">
                 <Button
                   size="lg"
-                  className="text-base h-12 px-8 bg-slate-800 hover:bg-slate-700 text-slate-100 shadow-lg"
+                  className="text-base h-12 px-8 bg-slate-100 hover:bg-slate-200 text-slate-800 shadow-lg"
                 >
                   View Example PDF
                 </Button>
@@ -234,7 +234,7 @@ export const Landing: React.FC<LandingProps> = ({ onStart }) => {
       </section>
 
       {/* Features Grid */}
-      <section id="features" className="py-24 bg-slate-900/30 border border-slate-800 relative overflow-hidden">
+      <section id="features" className="py-24 bg-slate-50/80 border border-slate-200 relative overflow-hidden">
         {/* Background Orbs */}
         <div className="absolute inset-0 pointer-events-none overflow-hidden">
           <div className="absolute top-1/4 -left-48 md:-left-32 w-80 h-80 bg-indigo-500/15 rounded-full blur-[100px]" />
@@ -244,7 +244,7 @@ export const Landing: React.FC<LandingProps> = ({ onStart }) => {
         <div className="container mx-auto px-4 relative z-10">
           <div className="text-center max-w-3xl mx-auto mb-16">
             <h2 className="text-3xl md:text-4xl font-bold mb-4">Everything you need to get booked</h2>
-            <p className="text-slate-400 text-lg">
+            <p className="text-slate-500 text-lg">
               Stop using napkins and MS Paint. Give venues the professional documentation they expect.
             </p>
           </div>
@@ -294,14 +294,14 @@ export const Landing: React.FC<LandingProps> = ({ onStart }) => {
         <div className="container mx-auto px-4 relative z-10">
           <div className="mb-16 md:text-center max-w-3xl mx-auto">
             <h2 className="text-3xl md:text-4xl font-bold mb-4">From idea to rider in 5 minutes</h2>
-            <p className="text-slate-400 text-lg">
+            <p className="text-slate-500 text-lg">
               A simple workflow designed to get you back to practicing.
             </p>
           </div>
 
           <div className="relative grid md:grid-cols-4 gap-8">
             {/* Connecting line (desktop) */}
-            <div className="hidden md:block absolute top-12 left-[12%] right-[12%] h-0.5 bg-gradient-to-r from-indigo-500/0 via-indigo-500/50 to-indigo-500/0 border-t border-dashed border-slate-700 z-0" />
+            <div className="hidden md:block absolute top-12 left-[12%] right-[12%] h-0.5 bg-gradient-to-r from-indigo-500/0 via-indigo-500/30 to-indigo-500/0 border-t border-dashed border-slate-300 z-0" />
 
             <StepCard
               number="01"
@@ -328,7 +328,7 @@ export const Landing: React.FC<LandingProps> = ({ onStart }) => {
       </section>
 
       {/* CTA Section */}
-      <section className="py-24 border border-slate-800">
+      <section className="py-24 border border-slate-200">
         <div className="container mx-auto px-4">
           <div className="relative rounded-3xl overflow-hidden bg-indigo-600 px-6 py-16 md:px-16 md:py-20 text-center">
             <div className="absolute inset-0 opacity-10 bg-[radial-gradient(#fff_1px,transparent_1px)] [background-size:16px_16px]" />
@@ -339,7 +339,7 @@ export const Landing: React.FC<LandingProps> = ({ onStart }) => {
               </p>
               <button
                 onClick={onStart}
-                className="inline-flex items-center justify-center border border-slate-800 bg-white text-indigo-600 hover:bg-indigo-50 h-14 px-8 text-lg font-semibold rounded-md shadow-xl transition-colors duration-100"
+                className="inline-flex items-center justify-center border border-indigo-200 bg-white text-indigo-600 hover:bg-indigo-50 h-14 px-8 text-lg font-semibold rounded-md shadow-xl transition-colors duration-100"
               >
                 Start Building Now
               </button>
@@ -359,12 +359,12 @@ export const Landing: React.FC<LandingProps> = ({ onStart }) => {
 // --- Helper Components ---
 function FeatureCard({ icon, title, description }: { icon: React.ReactNode; title: string; description: string }) {
   return (
-    <div className="p-6 rounded-2xl bg-slate-900/50 border border-slate-800 hover:border-indigo-500/30 transition-colors duration-150 group">
-      <div className="w-12 h-12 rounded-lg bg-slate-800 flex items-center justify-center mb-4 group-hover:bg-indigo-500/10 transition-colors">
+    <div className="p-6 rounded-2xl bg-white border border-slate-200 hover:border-indigo-300/50 transition-colors duration-150 group">
+      <div className="w-12 h-12 rounded-lg bg-slate-100 flex items-center justify-center mb-4 group-hover:bg-indigo-50 transition-colors">
         {icon}
       </div>
-      <h3 className="text-xl font-semibold mb-2 text-slate-100">{title}</h3>
-      <p className="text-slate-400 leading-relaxed">{description}</p>
+      <h3 className="text-xl font-semibold mb-2 text-slate-900">{title}</h3>
+      <p className="text-slate-500 leading-relaxed">{description}</p>
     </div>
   );
 }
@@ -372,11 +372,11 @@ function FeatureCard({ icon, title, description }: { icon: React.ReactNode; titl
 function StepCard({ number, title, description }: { number: string; title: string; description: string }) {
   return (
     <div className="relative z-10 flex flex-col items-center text-center">
-      <div className="w-16 h-16 rounded-2xl bg-slate-900 border border-slate-700 flex items-center justify-center text-2xl font-bold text-indigo-500 mb-6 shadow-xl shadow-black/50">
+      <div className="w-16 h-16 rounded-2xl bg-white border border-slate-200 flex items-center justify-center text-2xl font-bold text-indigo-500 mb-6 shadow-lg shadow-slate-200/80">
         {number}
       </div>
-      <h3 className="text-xl font-semibold mb-3 text-white">{title}</h3>
-      <p className="text-slate-400 max-w-xs mx-auto">{description}</p>
+      <h3 className="text-xl font-semibold mb-3 text-slate-900">{title}</h3>
+      <p className="text-slate-500 max-w-xs mx-auto">{description}</p>
     </div>
   );
 }
