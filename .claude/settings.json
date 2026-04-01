@@ -2,7 +2,11 @@
   "permissions": {
     "allow": [
       "mcp__plugin_playwright_playwright__browser_type",
-      "mcp__plugin_playwright_playwright__browser_close"
+      "mcp__plugin_playwright_playwright__browser_close",
+      "Bash(cat:*)"
+    ],
+    "additionalDirectories": [
+      "/tmp"
     ]
   }
 }
