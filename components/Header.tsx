@@ -165,14 +165,14 @@ export const Header: React.FC = () => {
 
   // Check if there are unsaved changes
   const hasUnsavedChanges = lastSavedDataRef.current !== null && lastSavedDataRef.current !== JSON.stringify(data)
-  const isSaveDisabled = isSavingPlot || !hasUnsavedChanges
+  const isSaveDisabled = isSavingPlot || (!!savedStageplotId && !hasUnsavedChanges)
 
   const shareUrlValue = savedStageplotId
     ? `${typeof window !== 'undefined' ? window.location.origin : ''}/stageplot?id=${savedStageplotId}`
     : ''
 
-  const handleSavePlot = useCallback(async () => {
-    if (!user) return
+  const handleSavePlot = useCallback(async (): Promise<boolean> => {
+    if (!user) return false
     setIsSavingPlot(true)
     try {
       // Get the current session to get the access token
@@ -180,7 +180,7 @@ export const Header: React.FC = () => {
 
       if (sessionError || !session?.access_token) {
         console.error('Failed to get session:', sessionError)
-        return
+        return false
       }
 
       const res = await fetch('/api/stageplots/save', {
@@ -196,18 +196,32 @@ export const Header: React.FC = () => {
       })
       const json = await res.json()
       if (json.success) {
+        const isFirstSave = !savedStageplotId
         setSaved(json.stageplotId, json.shareToken)
         setShareStats(null) // reset stats so they're re-fetched on next share open
         lastSavedDataRef.current = JSON.stringify(data)
+        if (isFirstSave) {
+          router.replace(`/stageplot?id=${json.stageplotId}`)
+        }
         if (showSavePrompt) {
           setShowSavePrompt(false)
           setShareOpen(true)
         }
+        return true
       }
+      return false
     } finally {
       setIsSavingPlot(false)
     }
   }, [data, savedStageplotId, setSaved, handleExportPNG, user, showSavePrompt])
+
+  const handleNavigateToDashboard = useCallback(async () => {
+    const isDefaultPlot = !data.details.bandName && data.members.length === 0 && data.stagePlot.length === 0
+    if (user && !isDefaultPlot && (hasUnsavedChanges || !savedStageplotId)) {
+      await handleSavePlot()
+    }
+    router.push('/dashboard')
+  }, [user, data, hasUnsavedChanges, savedStageplotId, handleSavePlot, router])
 
   const handleOpenShare = useCallback(async () => {
     setShareOpen(o => !o)
@@ -291,7 +305,7 @@ export const Header: React.FC = () => {
               </div>
               {user && (
                 <button
-                  onClick={() => router.push('/dashboard')}
+                  onClick={handleNavigateToDashboard}
                   className="p-1.5 hover:bg-slate-100 rounded-lg transition-colors"
                   title="Go to dashboard"
                 >
@@ -327,7 +341,7 @@ export const Header: React.FC = () => {
 
             {/* Saved/unsaved indicator + Save button */}
             <div className="flex items-center gap-2">
-              {savedStageplotId && !hasUnsavedChanges ? (
+              {savedStageplotId && !hasUnsavedChanges && user ? (
                 <span className="flex items-center gap-1 text-xs text-green-500">
                   <span className="w-1.5 h-1.5 rounded-full bg-green-500 shrink-0" />
                   Saved {savedAt ? relativeTime(savedAt) : ''}
@@ -338,9 +352,8 @@ export const Header: React.FC = () => {
                   Unsaved changes
                 </span>
               ) : (
-                <span className="flex items-center gap-1 text-xs text-amber-500">
-                  <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
-                  Not saved
+                <span className="flex items-center gap-1 text-xs text-slate-400">
+                  Not saved to cloud
                 </span>
               )}
               <button

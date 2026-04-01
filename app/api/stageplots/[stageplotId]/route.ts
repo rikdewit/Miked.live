@@ -57,6 +57,7 @@ export async function GET(
           accessLevel: 'owner',
           view_count: plot.view_count,
           created_at: plot.created_at,
+          updated_at: plot.updated_at,
         })
       }
     }
@@ -79,6 +80,7 @@ export async function GET(
           accessLevel: 'owner',
           view_count: plot.view_count,
           created_at: plot.created_at,
+          updated_at: plot.updated_at,
         })
       }
     }

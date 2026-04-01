@@ -56,8 +56,8 @@ export const useStagePlotState = () => {
     }
   }, [data]);
 
-  const setSaved = useCallback((stageplotId: string, shareToken: string) => {
-    const next: SaveState = { savedStageplotId: stageplotId, savedShareToken: shareToken, savedAt: new Date().toISOString() }
+  const setSaved = useCallback((stageplotId: string, shareToken: string, savedAt?: string) => {
+    const next: SaveState = { savedStageplotId: stageplotId, savedShareToken: shareToken, savedAt: savedAt ?? new Date().toISOString() }
     setSaveStateInternal(next)
     try {
       localStorage.setItem(SAVE_STATE_KEY, JSON.stringify(next))
@@ -82,7 +82,7 @@ export const useStagePlotState = () => {
       const json = await res.json()
       if (json.plotData) {
         setData(json.plotData)
-        setSaved(json.stageplotId, json.shareToken)
+        setSaved(json.stageplotId, json.shareToken, json.updated_at ?? json.created_at)
         return 'success'
       }
       return 'error'
