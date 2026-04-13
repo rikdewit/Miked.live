@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useRef, useState, useCallback, useLayoutEffect } from 'react';
+import React, { useRef, useState, useCallback, useLayoutEffect, useImperativeHandle } from 'react';
 import { RotateCcw, RotateCw, Trash2, Plus, Minus, ArrowUp, ArrowDown, Edit } from 'lucide-react';
 import { StageItem, BandMember } from '../types';
 import { STAGE_WIDTH, STAGE_DEPTH, getItemConfig } from '../utils/stageConfig';
@@ -557,6 +557,10 @@ function SelectionOverlay({ item, labelDimensions }: {
   return wrap(dr(cx - halfW - 2, cy - halfH - 2, halfW * 2 + 4, halfH * 2 + 4));
 }
 
+export interface StagePlot2DCanvasHandle {
+  selectMember: (memberId: string) => void;
+}
+
 export interface StagePlot2DCanvasProps {
   items: StageItem[];
   setItems: (items: StageItem[]) => void;
@@ -566,10 +570,12 @@ export interface StagePlot2DCanvasProps {
   onRotateItem?: (id: string, dir: 'left' | 'right') => void;
   onMoveToFront?: (id: string) => void;
   onMoveToBack?: (id: string) => void;
+  onUpdateMemberName?: (memberId: string, name: string) => void;
+  onUpdateMemberColor?: (memberId: string, colorIndex: number) => void;
   exportRef?: React.RefObject<SVGSVGElement | null>;
 }
 
-export const StagePlot2DCanvas: React.FC<StagePlot2DCanvasProps> = ({
+export const StagePlot2DCanvas = React.forwardRef<StagePlot2DCanvasHandle, StagePlot2DCanvasProps>(({
   items,
   setItems,
   editable,
@@ -578,10 +584,19 @@ export const StagePlot2DCanvas: React.FC<StagePlot2DCanvasProps> = ({
   onRotateItem,
   onMoveToFront,
   onMoveToBack,
+  onUpdateMemberName,
+  onUpdateMemberColor,
   exportRef,
-}) => {
+}, ref) => {
   const svgRef = useRef<SVGSVGElement>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+
+  useImperativeHandle(ref, () => ({
+    selectMember(memberId: string) {
+      const ids = itemsRef.current.filter(i => i.memberId === memberId).map(i => i.id);
+      setSelectedIds(new Set(ids));
+    },
+  }));
   const [marquee, setMarquee] = useState<{ x1: number; y1: number; x2: number; y2: number } | null>(null);
   const marqueeMovedRef = useRef(false);
   const [dragging, setDragging] = useState<{ offsets: Map<string, { ox: number; oy: number }> } | null>(null);
@@ -594,6 +609,7 @@ export const StagePlot2DCanvas: React.FC<StagePlot2DCanvasProps> = ({
   const [menuBarPos, setMenuBarPos] = useState<{ top: number; left: number } | null>(null);
   const [editingLabel, setEditingLabel] = useState<string | null>(null);
   const [labelEditText, setLabelEditText] = useState('');
+  const [colorPickerOpen, setColorPickerOpen] = useState(false);
   const labelInputRef = useRef<HTMLInputElement>(null);
   const menuBarRef = useRef<HTMLDivElement>(null);
   const itemsRef = useRef(items);
@@ -601,6 +617,9 @@ export const StagePlot2DCanvas: React.FC<StagePlot2DCanvasProps> = ({
 
   // Derive a single selectedId for single-selection toolbar compatibility
   const selectedId = selectedIds.size === 1 ? [...selectedIds][0] : null;
+
+  // Close color picker when selection changes
+  React.useEffect(() => { setColorPickerOpen(false); }, [selectedId]);
 
   // Store refs to label text elements and their measured dimensions
   const labelTextRefsMap = useRef<Map<string, SVGTextElement>>(new Map());
@@ -1096,13 +1115,17 @@ export const StagePlot2DCanvas: React.FC<StagePlot2DCanvasProps> = ({
       {selectedIds.size > 1 && editable && (
         <div className="absolute top-2 left-1/2 -translate-x-1/2 flex items-center gap-1.5 bg-white/95 backdrop-blur border border-slate-200 rounded-lg px-3 py-1.5 shadow-xl z-10 pointer-events-auto">
           <span className="text-xs text-slate-500 font-medium mr-1">{selectedIds.size} selected</span>
-          <button onClick={() => rotateSelectedItems('left')} className="p-1.5 hover:bg-slate-100 rounded transition-colors" title="Rotate group left">
-            <RotateCcw size={13} className="text-slate-600" />
-          </button>
-          <button onClick={() => rotateSelectedItems('right')} className="p-1.5 hover:bg-slate-100 rounded transition-colors" title="Rotate group right">
-            <RotateCw size={13} className="text-slate-600" />
-          </button>
-          <div className="w-px h-4 bg-slate-200 mx-0.5" />
+          {![...selectedIds].every(id => items.find(i => i.id === id)?.memberId) && (
+            <>
+              <button onClick={() => rotateSelectedItems('left')} className="p-1.5 hover:bg-slate-100 rounded transition-colors" title="Rotate group left">
+                <RotateCcw size={13} className="text-slate-600" />
+              </button>
+              <button onClick={() => rotateSelectedItems('right')} className="p-1.5 hover:bg-slate-100 rounded transition-colors" title="Rotate group right">
+                <RotateCw size={13} className="text-slate-600" />
+              </button>
+              <div className="w-px h-4 bg-slate-200 mx-0.5" />
+            </>
+          )}
           <button onClick={deleteSelected} className="p-1.5 hover:bg-red-50 rounded transition-colors" title="Delete all selected">
             <Trash2 size={13} className="text-red-500" />
           </button>
@@ -1120,44 +1143,98 @@ export const StagePlot2DCanvas: React.FC<StagePlot2DCanvasProps> = ({
             transform: 'translateX(-50%)',
           }}
         >
-          {editingLabel === selectedItem.id ? (
-            <input
-              ref={labelInputRef}
-              type="text"
-              value={labelEditText}
-              onChange={(e) => updateLabelInProgress(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  saveLabel(labelEditText);
-                } else if (e.key === 'Escape') {
-                  setEditingLabel(null);
-                  setLabelEditText('');
-                }
-              }}
-              onBlur={() => {
-                if (labelEditText) {
-                  saveLabel(labelEditText);
-                } else {
-                  setEditingLabel(null);
-                }
-              }}
-              className="text-xs bg-slate-50 border border-slate-300 rounded px-2 py-0.5 text-slate-700 focus:outline-none focus:border-slate-400 max-w-[120px] mr-2"
-              autoFocus
-            />
-          ) : (
+          {selectedItem.memberId ? (() => {
+            const member = members.find(m => m.id === selectedItem.memberId);
+            if (!member) return null;
+            const currentColor = MEMBER_COLORS[member.colorIndex % MEMBER_COLORS.length];
+            return (
+              <>
+                {editingLabel === selectedItem.id ? (
+                  <input
+                    ref={labelInputRef}
+                    type="text"
+                    defaultValue={member.name}
+                    onChange={e => onUpdateMemberName?.(member.id, e.target.value)}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter' || e.key === 'Escape') setEditingLabel(null);
+                    }}
+                    onBlur={() => setEditingLabel(null)}
+                    className="text-xs bg-slate-50 border border-slate-300 rounded px-2 py-0.5 text-slate-700 focus:outline-none focus:border-slate-400 max-w-[120px] mr-2"
+                    autoFocus
+                  />
+                ) : (
+                  <>
+                    <span className="text-xs text-slate-600 mr-2 max-w-[120px] truncate font-medium">{member.name || 'Unnamed'}</span>
+                    <button onClick={() => { setEditingLabel(selectedItem.id); setColorPickerOpen(false); }} className="p-1.5 hover:bg-slate-100 rounded transition-colors" title="Edit name">
+                      <Edit size={13} className="text-slate-500" />
+                    </button>
+                  </>
+                )}
+                <div className="w-px h-4 bg-slate-200 mx-0.5" />
+                {colorPickerOpen ? (
+                  <div className="flex items-center gap-1">
+                    {MEMBER_COLORS.map((c, i) => (
+                      <button
+                        key={i}
+                        className={`w-3.5 h-3.5 rounded-full transition-transform hover:scale-110 ${member.colorIndex === i ? 'ring-2 ring-offset-1 ring-slate-700' : ''}`}
+                        style={{ backgroundColor: c }}
+                        onClick={() => { onUpdateMemberColor?.(member.id, i); setColorPickerOpen(false); }}
+                        title={`Color ${i + 1}`}
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <button
+                    className="w-3.5 h-3.5 rounded-full mx-1 ring-2 ring-offset-1 ring-slate-300 hover:ring-slate-500 transition-all"
+                    style={{ backgroundColor: currentColor }}
+                    onClick={() => setColorPickerOpen(true)}
+                    title="Change color"
+                  />
+                )}
+              </>
+            );
+          })() : (
             <>
-              <span className="text-xs text-slate-600 mr-2 max-w-[120px] truncate font-medium">{selectedItem.label || 'Item'}</span>
-              <button onClick={startEditLabel} className="p-1.5 hover:bg-slate-100 rounded transition-colors" title="Edit label">
-                <Edit size={13} className="text-slate-500" />
+              {editingLabel === selectedItem.id ? (
+                <input
+                  ref={labelInputRef}
+                  type="text"
+                  value={labelEditText}
+                  onChange={(e) => updateLabelInProgress(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      saveLabel(labelEditText);
+                    } else if (e.key === 'Escape') {
+                      setEditingLabel(null);
+                      setLabelEditText('');
+                    }
+                  }}
+                  onBlur={() => {
+                    if (labelEditText) {
+                      saveLabel(labelEditText);
+                    } else {
+                      setEditingLabel(null);
+                    }
+                  }}
+                  className="text-xs bg-slate-50 border border-slate-300 rounded px-2 py-0.5 text-slate-700 focus:outline-none focus:border-slate-400 max-w-[120px] mr-2"
+                  autoFocus
+                />
+              ) : (
+                <>
+                  <span className="text-xs text-slate-600 mr-2 max-w-[120px] truncate font-medium">{selectedItem.label || 'Item'}</span>
+                  <button onClick={startEditLabel} className="p-1.5 hover:bg-slate-100 rounded transition-colors" title="Edit label">
+                    <Edit size={13} className="text-slate-500" />
+                  </button>
+                </>
+              )}
+              <button onClick={() => rotateSelectedItems('left')} className="p-1.5 hover:bg-slate-100 rounded transition-colors" title="Rotate left">
+                <RotateCcw size={13} className="text-slate-500" />
+              </button>
+              <button onClick={() => rotateSelectedItems('right')} className="p-1.5 hover:bg-slate-100 rounded transition-colors" title="Rotate right">
+                <RotateCw size={13} className="text-slate-500" />
               </button>
             </>
           )}
-          <button onClick={() => rotateSelectedItems('left')} className="p-1.5 hover:bg-slate-100 rounded transition-colors" title="Rotate left">
-            <RotateCcw size={13} className="text-slate-500" />
-          </button>
-          <button onClick={() => rotateSelectedItems('right')} className="p-1.5 hover:bg-slate-100 rounded transition-colors" title="Rotate right">
-            <RotateCw size={13} className="text-slate-500" />
-          </button>
           {selectedItem.type === 'power' && (
             <>
               <div className="w-px h-4 bg-slate-200 mx-1" />
@@ -1184,4 +1261,5 @@ export const StagePlot2DCanvas: React.FC<StagePlot2DCanvasProps> = ({
       )}
     </div>
   );
-};
+});
+StagePlot2DCanvas.displayName = 'StagePlot2DCanvas';

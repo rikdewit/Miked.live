@@ -125,6 +125,13 @@ export const useStagePlotState = () => {
     setData(prev => ({ ...prev, members: newMembers, stagePlot: [] }));
   }, []);
 
+  const updateMemberColor = useCallback((id: string, colorIndex: number) => {
+    setData(prev => ({
+      ...prev,
+      members: prev.members.map(m => m.id === id ? { ...m, colorIndex } : m),
+    }));
+  }, []);
+
   const updateMemberName = useCallback((id: string, name: string) => {
     setData(prev => ({
       ...prev,
@@ -296,6 +303,7 @@ export const useStagePlotState = () => {
     setData,
     addMember,
     applyRockTemplate,
+    updateMemberColor,
     updateMemberName,
     addMemberInstrument,
     updateMemberInstrument,

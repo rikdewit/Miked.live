@@ -10,7 +10,7 @@ import { useStagePlot } from '@/providers/StagePlotProvider'
 import { INSTRUMENTS, INITIAL_RIDER_DATA, STAGE_OBJECTS } from '@/constants'
 import { generateMemberItems } from '@/utils/stageHelpers'
 import { BandMember, StageItem, RiderData, StageObjectDef } from '@/types'
-import { StagePlot2DCanvas, MEMBER_COLORS } from '@/components/StagePlot2DCanvas'
+import { StagePlot2DCanvas, MEMBER_COLORS, StagePlot2DCanvasHandle } from '@/components/StagePlot2DCanvas'
 import { SidebarObjectPalette } from '@/components/SidebarObjectPalette'
 import { AuthModal } from '@/components/AuthModal'
 import { supabase } from '@/utils/supabase'
@@ -81,7 +81,7 @@ function DashboardPageInner() {
   const searchParams = useSearchParams()
   const {
     data, setData, updateStageItems,
-    addMember, removeMember,
+    addMember, removeMember, updateMemberColor, updateMemberName,
     moveToFront, moveToBack,
     loadFromServer, isHydrated, viewMode, setViewMode, clearSaved,
   } = useStagePlot()
@@ -152,10 +152,12 @@ function DashboardPageInner() {
   const [draggingObjectId, setDraggingObjectId] = useState<string | null>(null)
   const [dragPos, setDragPos] = useState<{ x: number; y: number } | null>(null)
   const dragLabelRef = useRef<HTMLDivElement>(null)
+  const canvasRef = useRef<StagePlot2DCanvasHandle>(null)
   const [dragLabelText, setDragLabelText] = useState('')
 
   // UI state
   const [showClearConfirm, setShowClearConfirm] = useState(false)
+  const [activeSidebarMemberId, setActiveSidebarMemberId] = useState<string | null>(null)
 
   // ── Rotation ──────────────────────────────────────────────────────────────
   const handleRotateItem = useCallback((itemId: string, direction: 'left' | 'right') => {
@@ -254,10 +256,15 @@ function DashboardPageInner() {
     }
   }, [dragPos, data.members, data.stagePlot, updateStageItems])
 
-  // Click-to-place (mobile fallback)
+  // Click-to-place (mobile fallback) or select if already placed
   const handleMemberClick = useCallback((memberId: string) => {
     const member = data.members.find(m => m.id === memberId)
-    if (!member || isMemberFullyPlaced(member, data.stagePlot)) return
+    if (!member) return
+    const placedItems = data.stagePlot.filter(i => i.memberId === memberId)
+    if (placedItems.length > 0) {
+      canvasRef.current?.selectMember(memberId)
+      return
+    }
     const potentialItems = generateMemberItems(member, 50, 50)
     const hasPerson = data.stagePlot.some(i => i.memberId === memberId && i.type === 'person')
     const itemsToAdd = potentialItems.filter(newItem => {
@@ -432,31 +439,37 @@ function DashboardPageInner() {
       <aside className="w-[272px] shrink-0 flex flex-col bg-white border-r border-gray-200 overflow-hidden">
 
         {/* Members — compact dot strip */}
-        <div className="px-3 py-2.5 border-b border-gray-200 flex flex-wrap items-center gap-1.5 shrink-0">
-          {data.members.map((member, index) => {
-            const colorIdx = member.colorIndex ?? index
-            const color = MEMBER_COLORS[colorIdx % MEMBER_COLORS.length]
+        <div className="border-b border-gray-200 shrink-0">
+          <div className="px-3 py-2.5 flex flex-wrap items-center gap-1.5">
+          {data.members.map((member) => {
+            const color = MEMBER_COLORS[member.colorIndex % MEMBER_COLORS.length]
             const isFull = getPlacementStatus(member, data.stagePlot) === 'full'
+            const isActive = activeSidebarMemberId === member.id
             return (
-              <div key={member.id} className="relative group" title={member.name || 'Unnamed'}>
+              <div key={member.id} className="relative" title={member.name || 'Unnamed'}>
                 <div
-                  className={`w-6 h-6 rounded-full cursor-grab active:cursor-grabbing transition-opacity flex items-center justify-center ${isFull ? 'opacity-40' : ''}`}
+                  className={`w-6 h-6 rounded-full cursor-grab active:cursor-grabbing transition-opacity flex items-center justify-center ring-2 ${isActive ? 'ring-gray-800' : 'ring-transparent'} ${isFull ? 'opacity-40' : ''}`}
                   style={{ backgroundColor: color }}
                   draggable={!isFull}
                   onDragStart={e => handleDragStart(e, member.id, member.name)}
                   onDragEnd={handleDragEnd}
-                  onClick={() => handleMemberClick(member.id)}
+                  onClick={() => {
+                    setActiveSidebarMemberId(isActive ? null : member.id)
+                    handleMemberClick(member.id)
+                  }}
                 >
                   <span className="text-[9px] font-bold text-black/70 leading-none select-none pointer-events-none">
                     {(member.name || '?')[0].toUpperCase()}
                   </span>
                 </div>
-                <button
-                  onClick={e => { e.stopPropagation(); removeMember(member.id) }}
-                  className="absolute -top-1 -right-1 hidden group-hover:flex items-center justify-center w-3.5 h-3.5 bg-red-500 rounded-full text-white z-10"
-                >
-                  <X size={7} />
-                </button>
+                {isActive && (
+                  <button
+                    onClick={e => { e.stopPropagation(); removeMember(member.id); setActiveSidebarMemberId(null) }}
+                    className="absolute -top-1 -right-1 flex items-center justify-center w-3.5 h-3.5 bg-red-500 rounded-full text-white z-10"
+                  >
+                    <X size={7} />
+                  </button>
+                )}
               </div>
             )
           })}
@@ -487,6 +500,7 @@ function DashboardPageInner() {
               Use template
             </button>
           )}
+          </div>
         </div>
 
         {/* Object palette - takes rest of space */}
@@ -521,6 +535,7 @@ function DashboardPageInner() {
           onDrop={handleDrop}
         >
           <StagePlot2DCanvas
+            ref={canvasRef}
             items={data.stagePlot}
             setItems={updateStageItems}
             editable={true}
@@ -529,6 +544,8 @@ function DashboardPageInner() {
             onRotateItem={handleRotateItem}
             onMoveToFront={moveToFront}
             onMoveToBack={moveToBack}
+            onUpdateMemberName={updateMemberName}
+            onUpdateMemberColor={updateMemberColor}
           />
 
           {/* Empty state */}
