@@ -1,5 +1,6 @@
 import React from 'react'
 import { NextRequest, NextResponse } from 'next/server'
+import { Webhook } from 'svix'
 import { Resend } from 'resend'
 import { getSenderEmails } from '@/utils/get-sender-emails'
 import { PasswordResetEmail } from '@/emails/templates/PasswordReset'
@@ -20,15 +21,31 @@ interface AuthHookPayload {
 }
 
 export async function POST(request: NextRequest) {
-  // Verify the hook secret so only Supabase can call this endpoint
   const hookSecret = process.env.SUPABASE_AUTH_HOOK_SECRET
-  const authHeader = request.headers.get('authorization')
+  if (!hookSecret) {
+    return NextResponse.json({ error: 'Hook secret not configured' }, { status: 500 })
+  }
 
-  if (!hookSecret || authHeader !== `Bearer ${hookSecret}`) {
+  const body = await request.text()
+  const svixId = request.headers.get('svix-id')
+  const svixTimestamp = request.headers.get('svix-timestamp')
+  const svixSignature = request.headers.get('svix-signature')
+
+  if (!svixId || !svixTimestamp || !svixSignature) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const payload: AuthHookPayload = await request.json()
+  let payload: AuthHookPayload
+  try {
+    const wh = new Webhook(hookSecret)
+    payload = wh.verify(body, {
+      'svix-id': svixId,
+      'svix-timestamp': svixTimestamp,
+      'svix-signature': svixSignature,
+    }) as AuthHookPayload
+  } catch {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
   const { user, email_data } = payload
   const { support } = getSenderEmails()
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://miked.live'

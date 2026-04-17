@@ -12,7 +12,10 @@
       "mcp__plugin_vercel_vercel__list_projects",
       "Bash(vercel link *)",
       "mcp__claude_ai_Supabase__execute_sql",
-      "mcp__claude_ai_Supabase__get_logs"
+      "mcp__claude_ai_Supabase__get_logs",
+      "Read(//usr/local/bin/**)",
+      "Read(//usr/**)",
+      "mcp__plugin_vercel_vercel__list_deployments"
     ],
     "additionalDirectories": [
       "/tmp"
