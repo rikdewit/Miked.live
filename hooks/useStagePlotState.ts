@@ -99,6 +99,15 @@ export const useStagePlotState = () => {
     } catch { /* ignore */ }
   }, [])
 
+  const resetPlot = useCallback(() => {
+    setData(INITIAL_RIDER_DATA)
+    setSaveStateInternal(INITIAL_SAVE_STATE)
+    try {
+      localStorage.removeItem(STORAGE_KEY)
+      localStorage.removeItem(SAVE_STATE_KEY)
+    } catch { /* ignore */ }
+  }, [])
+
   const addMember = useCallback(() => {
     setData(prev => {
       const usedIndices = new Set(prev.members.map(m => m.colorIndex ?? prev.members.indexOf(m)));
@@ -318,6 +327,7 @@ export const useStagePlotState = () => {
     savedAt: saveState.savedAt,
     setSaved,
     clearSaved,
+    resetPlot,
     loadFromServer,
     isHydrated,
     viewMode,

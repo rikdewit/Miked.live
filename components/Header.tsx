@@ -161,7 +161,7 @@ export const Header: React.FC = () => {
   const [shareStats, setShareStats] = useState<{ view_count: number; created_at: string } | null>(null)
   const lastSavedDataRef = useRef<string | null>(null)
 
-  const { savedStageplotId, savedShareToken, savedAt, setSaved, clearSaved } = useStagePlot()
+  const { savedStageplotId, savedShareToken, savedAt, setSaved, clearSaved, resetPlot } = useStagePlot()
 
   // Check if there are unsaved changes
   const hasUnsavedChanges = lastSavedDataRef.current !== null && lastSavedDataRef.current !== JSON.stringify(data)
@@ -451,6 +451,8 @@ export const Header: React.FC = () => {
                       try {
                         const { error } = await supabase.auth.signOut()
                         if (error) throw error
+                        resetPlot()
+                        router.replace('/stageplot')
                         setUserMenuOpen(false)
                       } catch (err) {
                         console.error('Sign out failed:', err)
