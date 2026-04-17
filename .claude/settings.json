@@ -15,7 +15,8 @@
       "mcp__claude_ai_Supabase__get_logs",
       "Read(//usr/local/bin/**)",
       "Read(//usr/**)",
-      "mcp__plugin_vercel_vercel__list_deployments"
+      "mcp__plugin_vercel_vercel__list_deployments",
+      "mcp__plugin_vercel_vercel__get_runtime_logs"
     ],
     "additionalDirectories": [
       "/tmp"
