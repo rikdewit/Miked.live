@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/utils/supabase'
+import { supabaseAdmin } from '@/utils/supabaseAdmin'
 import { RiderData } from '@/types'
 
 async function getAuthUser(request: NextRequest) {
@@ -102,6 +103,13 @@ export async function GET(
       .update({ view_count: (plot.view_count ?? 0) + 1 })
       .eq('id', stageplotId)
 
+    // Fetch creator email
+    let creatorEmail: string | null = null
+    if (plot.user_id) {
+      const { data: { user: creator } } = await supabaseAdmin.auth.admin.getUserById(plot.user_id)
+      creatorEmail = creator?.email ?? null
+    }
+
     return NextResponse.json({
       plotData: plot.plot_data as RiderData,
       stageplotId: plot.id,
@@ -109,6 +117,7 @@ export async function GET(
       accessLevel: 'guest',
       view_count: (plot.view_count ?? 0) + 1,
       created_at: plot.created_at,
+      creator_email: creatorEmail,
     })
   } catch (error) {
     console.error('API error:', error)

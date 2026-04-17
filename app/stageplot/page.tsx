@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo, useRef, useCallback, useEffect, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
-import { Download, Loader2 } from 'lucide-react'
+import { Download, Loader2, Mic2 } from 'lucide-react'
 import {
   Plus, Trash2, AlertTriangle, Music2, X,
 } from 'lucide-react'
@@ -89,7 +89,8 @@ function DashboardPageInner() {
   // Loading stageplot by ID state
   const [loadStatus, setLoadStatus] = useState<'idle' | 'loading' | 'success' | 'unauthorized' | 'not_found' | 'error'>('idle')
   const [viewPlotData, setViewPlotData] = useState<RiderData | null>(null)
-  const [viewCount, setViewCount] = useState<number | null>(null)
+
+  const [creatorEmail, setCreatorEmail] = useState<string | null>(null)
   const [showAuthModal, setShowAuthModal] = useState(false)
   const [stageplotIdToLoad, setStageplotIdToLoad] = useState<string | null>(null)
   const [isDownloading, setIsDownloading] = useState(false)
@@ -130,7 +131,7 @@ function DashboardPageInner() {
             // Guest — show read-only viewer
             setViewPlotData(json.plotData)
             setData(json.plotData) // Load into context so header can display the name
-            setViewCount(json.view_count ?? null)
+            setCreatorEmail(json.creator_email ?? null)
             setViewMode('viewer')
             setLoadStatus('success')
           }
@@ -386,20 +387,26 @@ function DashboardPageInner() {
   // ── VIEWER MODE (read-only) ────────────────────────────────────────────────
   if (viewMode === 'viewer' && viewPlotData) {
     return (
-      <div className="fixed inset-0 flex flex-col bg-white z-40">
-        {/* Nav bar with viewer info and download */}
-        <nav className="bg-white border-b border-slate-200/70 px-4 h-16 flex items-center gap-3 shrink-0">
+      <div className="fixed inset-0 flex flex-col bg-white z-50">
+        {/* Nav bar */}
+        <nav className="bg-white border-b border-slate-200/70 px-4 h-16 flex items-center gap-3 shrink-0 flex-none">
+          {/* Logo */}
+          <div className="bg-indigo-600 p-1.5 rounded-lg shrink-0">
+            <Mic2 className="w-5 h-5 text-white" />
+          </div>
+
           {viewPlotData?.details?.bandName && (
-            <span className="text-base text-slate-600 truncate">{viewPlotData.details.bandName}</span>
+            <span className="text-base font-medium text-slate-800 truncate">{viewPlotData.details.bandName}</span>
+          )}
+
+          {creatorEmail && (
+            <>
+              <span className="text-slate-300 select-none hidden sm:block">·</span>
+              <span className="hidden sm:block text-sm text-slate-400 truncate">by {creatorEmail}</span>
+            </>
           )}
 
           <div className="flex-1" />
-
-          {viewCount !== null && (
-            <span className="hidden sm:block text-sm text-slate-300">
-              {viewCount} view{viewCount !== 1 ? 's' : ''}
-            </span>
-          )}
 
           {/* Download button */}
           <button
@@ -413,15 +420,13 @@ function DashboardPageInner() {
         </nav>
 
         {/* Canvas */}
-        <div className="flex-1 overflow-hidden">
-          {viewPlotData && (
-            <StagePlot2DCanvas
-              items={viewPlotData.stagePlot}
-              setItems={() => {}}
-              editable={false}
-              members={viewPlotData.members}
-            />
-          )}
+        <div className="flex-1 overflow-hidden min-h-0">
+          <StagePlot2DCanvas
+            items={viewPlotData.stagePlot}
+            setItems={() => {}}
+            editable={false}
+            members={viewPlotData.members}
+          />
         </div>
       </div>
     )
