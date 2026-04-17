@@ -1,4 +1,4 @@
-import { InstrumentDefinition, InstrumentType } from './types';
+import { InstrumentDefinition, InstrumentType, StageObjectDef } from './types';
 
 // ─── Stage Plot Camera Settings ───────────────────────────────────────────────
 // Adjust these to change how the stage is framed in each view/mode.
@@ -88,6 +88,38 @@ export const INSTRUMENTS: InstrumentDefinition[] = [
   // Tracks
   { id: 'tracks_mono', group: 'Tracks', variantLabel: 'Mono', name: 'Tracks (Mono)', type: InstrumentType.OTHER, defaultDi: true, icon: 'Laptop' },
   { id: 'tracks_stereo', group: 'Tracks', variantLabel: 'Stereo', name: 'Tracks (Stereo)', type: InstrumentType.OTHER, defaultDi: true, icon: 'Laptop' },
+];
+
+export const STAGE_OBJECT_CATEGORIES: { id: string; label: string }[] = [
+  { id: 'monitoring', label: 'Monitoring' },
+  { id: 'microphones', label: 'Microphones' },
+  { id: 'amplifiers', label: 'Amplifiers' },
+  { id: 'instruments', label: 'Instruments' },
+  { id: 'di', label: 'DI & Signal' },
+  { id: 'power', label: 'Power' },
+  { id: 'custom', label: 'Custom' },
+];
+
+export const STAGE_OBJECTS: StageObjectDef[] = [
+  // Monitoring
+  { id: 'monitor', label: 'Monitor', category: 'monitoring', svgPath: '/assets/MONITOR.svg', tags: ['wedge', 'floor monitor', 'sidefill'], itemLabel: 'Mon', itemType: 'monitor' },
+  // Microphones
+  { id: 'mic_stand', label: 'Mic Stand', category: 'microphones', svgPath: '/assets/MIC_STAND.svg', tags: ['stand', 'microphone'], itemLabel: 'Mic Stand', itemType: 'stand' },
+  // Amplifiers
+  { id: 'guitar_amp', label: 'Guitar Amp', category: 'amplifiers', svgPath: '/assets/GUITAR_AMP.svg', tags: ['gtr', 'cab', 'combo'], itemLabel: 'Amp', itemType: 'custom', customWidth: 1.3, customDepth: 0.65 },
+  { id: 'bass_amp', label: 'Bass Amp', category: 'amplifiers', svgPath: '/assets/BASS_AMP.svg', tags: ['bass cab', 'bass combo'], itemLabel: 'Bass Amp', itemType: 'custom', customWidth: 2.0, customDepth: 1.0 },
+  // Instruments
+  { id: 'keys', label: 'Keys', category: 'instruments', svgPath: '/assets/KEYS.svg', tags: ['keyboard', 'piano', 'synth'], itemLabel: 'Keys', itemType: 'custom', customWidth: 2.4, customDepth: 0.63 },
+  { id: 'drum_kit', label: 'Drum Kit', category: 'instruments', svgPath: '/assets/DRUM KIT.svg', tags: ['drums', 'kit', 'percussion'], itemLabel: 'Drum Kit', itemType: 'custom', customWidth: 2.5, customDepth: 1.2 },
+  // DI & Signal
+  { id: 'di_box', label: 'DI Box', category: 'di', svgPath: '/assets/DI BOX.svg', tags: ['direct inject', 'direct box', 'di'], itemLabel: 'DI Box', itemType: 'custom', customWidth: 0.4, customDepth: 0.6 },
+  // Power
+  { id: 'power_eu', label: 'Power (EU)', category: 'power', svgPath: '/assets/POWER_EU.svg', tags: ['powerstrip', 'socket', 'extension'], itemLabel: 'Power', itemType: 'power' },
+  { id: 'power_us', label: 'Power (US)', category: 'power', svgPath: '/assets/POWER_US.svg', tags: ['powerstrip', 'socket', 'extension'], itemLabel: 'Power', itemType: 'power' },
+  // Custom
+  { id: 'custom_rect', label: 'Rectangle', category: 'custom', tags: ['block', 'box', 'shape'], itemLabel: 'Custom', itemType: 'custom', customWidth: 1.0, customDepth: 1.0 },
+  { id: 'custom_circle', label: 'Circle', category: 'custom', tags: ['round', 'oval', 'shape'], itemLabel: 'Circle', itemType: 'custom', shape: 'circle', customWidth: 1.0, customDepth: 1.0 },
+  { id: 'text_label', label: 'Text Label', category: 'custom', tags: ['label', 'text', 'annotation'], itemLabel: 'Label', itemType: 'custom', customWidth: 0, customDepth: 0 },
 ];
 
 export const INITIAL_RIDER_DATA = {

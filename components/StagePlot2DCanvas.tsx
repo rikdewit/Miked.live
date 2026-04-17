@@ -1,0 +1,1265 @@
+'use client';
+
+import React, { useRef, useState, useCallback, useLayoutEffect, useImperativeHandle } from 'react';
+import { RotateCcw, RotateCw, Trash2, Plus, Minus, ArrowUp, ArrowDown, Edit } from 'lucide-react';
+import { StageItem, BandMember } from '../types';
+import { STAGE_WIDTH, STAGE_DEPTH, getItemConfig } from '../utils/stageConfig';
+
+// SVG coordinate space: 800×500 = 8m×5m stage (1m = 100 SVG units)
+const SVG_W = 800;
+const SVG_H = 500;
+
+const pctX = (p: number) => (p / 100) * SVG_W;
+const pctY = (p: number) => (p / 100) * SVG_H;
+const svgXToP = (x: number) => (x / SVG_W) * 100;
+const svgYToP = (y: number) => (y / SVG_H) * 100;
+const mW = (m: number) => (m / STAGE_WIDTH) * SVG_W;
+const mH = (m: number) => (m / STAGE_DEPTH) * SVG_H;
+
+export const MEMBER_COLORS = [
+  '#818cf8', // indigo-400
+  '#f472b6', // pink-400
+  '#fb923c', // orange-400
+  '#4ade80', // green-400
+  '#22d3ee', // cyan-400
+  '#c084fc', // purple-400
+  '#facc15', // yellow-400
+  '#f87171', // red-400
+];
+
+// Returns the half-width and half-height of the visual bounding box for each item type.
+// Uses the exact viewBox dimensions of each SVG asset so the hit area and selection
+// border always align with what's actually rendered.
+function getItemBoundingBox(
+  item: StageItem,
+  w: number,
+  h: number,
+): { halfW: number; halfH: number } {
+  const label = (item.label || '').toLowerCase();
+
+  if (item.type === 'monitor') {
+    // MONITOR.svg viewBox: 613×296
+    const aspect = 613 / 296;
+    const sw = Math.min(w, h * aspect) * 1.9;
+    return { halfW: sw / 2, halfH: sw / aspect / 2 };
+  }
+
+  if (label.includes('mic')) {
+    // MIC_STAND.svg viewBox: 317×482
+    const aspect = 317 / 482;
+    const sw = Math.min(w, h * aspect) * 5;
+    return { halfW: sw / 2, halfH: sw / aspect / 2 };
+  }
+
+  if (label.includes('amp')) {
+    // BASS_AMP.svg viewBox: 599×442  |  GUITAR_AMP.svg viewBox: 534×253
+    const aspect = label.includes('bass') ? 599 / 442 : 534 / 253;
+    const sw = Math.min(w, h * aspect) * 0.8;
+    return { halfW: sw / 2, halfH: sw / aspect / 2 };
+  }
+
+  if (label.includes('di')) {
+    // DI_BOX.svg viewBox: 127×191
+    const aspect = 127 / 191;
+    const sw = Math.min(w, h * aspect) * 0.6;
+    return { halfW: sw / 2, halfH: sw / aspect / 2 };
+  }
+
+  if (label.toLowerCase().includes('keys')) {
+    // KEYS.svg viewBox: 782×207
+    const aspect = 782 / 207;
+    const sw = Math.min(w, h * aspect) * .8;
+    return { halfW: sw / 2, halfH: sw / aspect / 2 };
+  }
+
+  if (label.toLowerCase().includes('drum')) {
+    // DRUM KIT.svg viewBox: 825×474
+    const aspect = 825 / 474;
+    const sw = Math.min(w, h * aspect) * 1;
+    return { halfW: sw / 2, halfH: sw / aspect / 2 };
+  }
+
+  if (item.type === 'power') {
+    const socketSize = Math.min(h, 40) * 0.65;
+    return { halfW: ((item.quantity || 1) * socketSize) / 2, halfH: socketSize / 2 };
+  }
+
+  // Default: use the item's allocated rect dimensions
+  return { halfW: w / 2, halfH: h / 2 };
+}
+
+function getMemberColor(item: StageItem, members: BandMember[]): string {
+  if (!item.memberId) return '#6b7280';
+  const member = members.find(m => m.id === item.memberId);
+  if (!member) return '#6b7280';
+  const idx = member.colorIndex ?? members.indexOf(member);
+  return MEMBER_COLORS[idx % MEMBER_COLORS.length];
+}
+
+function ItemShape({
+  item,
+  members,
+  isGhost,
+  isSelected,
+  editable,
+  onPointerDown,
+  onResizePointerDown,
+  labelDimensions,
+  labelTextRefsMap,
+}: {
+  item: StageItem;
+  members: BandMember[];
+  isGhost: boolean;
+  isSelected: boolean;
+  editable: boolean;
+  onPointerDown?: (e: React.PointerEvent, item: StageItem) => void;
+  onResizePointerDown?: (e: React.PointerEvent, item: StageItem, corner: 'tl' | 'tr' | 'bl' | 'br') => void;
+  labelDimensions: Record<string, { width: number; height: number }>;
+  labelTextRefsMap: React.MutableRefObject<Map<string, SVGTextElement>>;
+}) {
+  const config = getItemConfig(item);
+  const cx = pctX(item.x);
+  const cy = pctY(item.y);
+  const w = Math.max(mW(config.width), 16);
+  const h = Math.max(mH(config.depth), 12);
+  const rotDeg = ((item.rotation || 0) * 180) / Math.PI;
+  const color = getMemberColor(item, members);
+  const label = item.label || '';
+  const shortLabel = label.length > 9 ? label.slice(0, 8) + '…' : label;
+  const opacity = isGhost ? 0.45 : 1;
+  const sel = '#818cf8';
+  const cursor = editable && !isGhost ? 'grab' : 'default';
+
+  const groupProps = {
+    transform: `rotate(${rotDeg}, ${cx}, ${cy})`,
+    opacity,
+    style: { cursor },
+    onPointerDown: isGhost || !editable ? undefined : (e: React.PointerEvent) => onPointerDown?.(e, item),
+    onClick: (e: React.MouseEvent) => e.stopPropagation(),
+  };
+
+  // Person — single circle
+  if (config.shape === 'person') {
+    const r = Math.min(w, h) / 2;
+    return (
+      <g {...groupProps}>
+        <circle cx={cx} cy={cy} r={r} fill={color} stroke="rgba(0,0,0,0.4)" strokeWidth={1} />
+        <text x={cx} y={cy + 4} textAnchor="middle" fontSize={8} fill="black" fontFamily="system-ui,sans-serif" fontWeight="600" pointerEvents="none"
+          transform={`rotate(${-rotDeg}, ${cx}, ${cy})`}>
+          {label}
+        </text>
+      </g>
+    );
+  }
+
+  // Monitor — using SVG asset
+  if (item.type === 'monitor') {
+    const { halfW, halfH } = getItemBoundingBox(item, w, h);
+    return (
+      <g {...groupProps}>
+        <image
+          x={cx - halfW}
+          y={cy - halfH}
+          width={halfW * 2}
+          height={halfH * 2}
+          href="/assets/MONITOR.svg"
+          pointerEvents="none"
+        />
+        <rect
+          x={cx - halfW}
+          y={cy - halfH}
+          width={halfW * 2}
+          height={halfH * 2}
+          fill="transparent"
+          pointerEvents="auto"
+        />
+      </g>
+    );
+  }
+
+  // Mic stand — check first so it uses SVG asset
+  if (label.toLowerCase().includes('mic') || (item.type === 'stand' && label.toLowerCase().includes('mic stand'))) {
+    const { halfW, halfH } = getItemBoundingBox(item, w, h);
+    return (
+      <g {...groupProps}>
+        <image
+          x={cx - halfW}
+          y={cy - halfH}
+          width={halfW * 2}
+          height={halfH * 2}
+          href="/assets/MIC_STAND.svg"
+          pointerEvents="none"
+        />
+        <rect
+          x={cx - halfW}
+          y={cy - halfH}
+          width={halfW * 2}
+          height={halfH * 2}
+          fill="transparent"
+          pointerEvents="auto"
+        />
+      </g>
+    );
+  }
+
+  // Other poles — small circle (not mic stands)
+  if (config.shape === 'pole' || item.type === 'stand') {
+    const r = Math.min(w, h) / 2;
+    return (
+      <g {...groupProps}>
+        <circle cx={cx} cy={cy} r={r} fill="#475569" stroke="#334155" strokeWidth={1} />
+      </g>
+    );
+  }
+
+  // Label-only (zero-size custom)
+  if (item.customWidth === 0 && item.customDepth === 0) {
+    const dims = labelDimensions[item.id];
+    const rectWidth = dims ? dims.width + 8 : 64;
+    const rectHeight = dims ? dims.height + 6 : 22;
+    const rectX = cx - rectWidth / 2;
+    const rectY = cy - rectHeight / 2;
+
+    return (
+      <g {...groupProps}>
+        <rect x={rectX} y={rectY} width={rectWidth} height={rectHeight} rx={3} fill="transparent" stroke="transparent" strokeWidth={1} />
+        <text
+          ref={(el) => {
+            if (el) labelTextRefsMap.current.set(item.id, el);
+          }}
+          x={cx}
+          y={cy + 5}
+          textAnchor="middle"
+          fontSize={10}
+          fill="black"
+          fontFamily="system-ui,sans-serif"
+          fontWeight="600"
+          pointerEvents="none"
+        >
+          {label}
+        </text>
+      </g>
+    );
+  }
+
+  // Drum Kit — using SVG asset (checked before generic drum shape)
+  if (label.toLowerCase().includes('drum')) {
+    const { halfW, halfH } = getItemBoundingBox(item, w, h);
+    return (
+      <g {...groupProps}>
+        <image
+          x={cx - halfW}
+          y={cy - halfH}
+          width={halfW * 2}
+          height={halfH * 2}
+          href="/assets/DRUM KIT.svg"
+          pointerEvents="none"
+        />
+        <rect
+          x={cx - halfW}
+          y={cy - halfH}
+          width={halfW * 2}
+          height={halfH * 2}
+          fill="transparent"
+          pointerEvents="auto"
+        />
+      </g>
+    );
+  }
+
+  // Drum kit — red rect + inner circles (fallback for non-SVG drum items)
+  if (label.toLowerCase().includes('kit')) {
+    return (
+      <g {...groupProps}>
+        <rect x={cx - w / 2} y={cy - h / 2} width={w} height={h} rx={4} fill="#7f1d1d" stroke="#991b1b" strokeWidth={1} />
+        <circle cx={cx} cy={cy + h * 0.1} r={Math.min(w, h) * 0.2} fill="none" stroke="#fca5a5" strokeWidth={1.5} />
+        <circle cx={cx - w * 0.25} cy={cy - h * 0.15} r={Math.min(w, h) * 0.1} fill="none" stroke="#fca5a5" strokeWidth={1} />
+        <circle cx={cx + w * 0.28} cy={cy + h * 0.15} r={Math.min(w, h) * 0.1} fill="none" stroke="#fca5a5" strokeWidth={1} />
+      </g>
+    );
+  }
+
+  // Keys — using SVG asset
+  if (label.toLowerCase().includes('keys')) {
+    const { halfW, halfH } = getItemBoundingBox(item, w, h);
+    return (
+      <g {...groupProps}>
+        <image
+          x={cx - halfW}
+          y={cy - halfH}
+          width={halfW * 2}
+          height={halfH * 2}
+          href="/assets/KEYS.svg"
+          pointerEvents="none"
+        />
+        <rect
+          x={cx - halfW}
+          y={cy - halfH}
+          width={halfW * 2}
+          height={halfH * 2}
+          fill="transparent"
+          pointerEvents="auto"
+        />
+      </g>
+    );
+  }
+
+  // Amp — guitar or bass amplifier (using SVG assets)
+  if (label.toLowerCase().includes('amp')) {
+    const isBassAmp = label.toLowerCase().includes('bass');
+    const ampSvg = isBassAmp ? '/assets/BASS_AMP.svg' : '/assets/GUITAR_AMP.svg';
+    const { halfW, halfH } = getItemBoundingBox(item, w, h);
+    return (
+      <g {...groupProps}>
+        <image
+          x={cx - halfW}
+          y={cy - halfH}
+          width={halfW * 2}
+          height={halfH * 2}
+          href={ampSvg}
+          pointerEvents="none"
+        />
+        <rect
+          x={cx - halfW}
+          y={cy - halfH}
+          width={halfW * 2}
+          height={halfH * 2}
+          fill="transparent"
+          pointerEvents="auto"
+        />
+      </g>
+    );
+  }
+
+  // Power strip
+  if (item.type === 'power') {
+    const socketCount = item.quantity || 1;
+    const socketSize = Math.min(h, 40) * 0.75; // 25% smaller, square socket to maintain SVG aspect ratio
+    const totalStripW = socketCount * socketSize;
+    const stripStartX = cx - totalStripW / 2;
+    const scale = socketSize / 178; // SVG is 178x178
+
+    return (
+      <g {...groupProps}>
+        {/* Render multiple sockets */}
+        {Array.from({ length: socketCount }, (_, i) => {
+          const socketX = stripStartX + i * socketSize;
+          return (
+            <g key={i} transform={`translate(${socketX}, ${cy - socketSize / 2}) scale(${scale})`}>
+              {/* White background with border */}
+              <rect x="2" y="2" width="174" height="174" rx="13" fill="white" stroke="black" strokeWidth="4"/>
+              {/* Large gray center circle */}
+              <circle cx="89.5" cy="88.5" r="65.5" fill="#D9D9D9" stroke="black" strokeWidth="4"/>
+              {/* Left socket hole */}
+              <circle cx="63" cy="89" r="9" fill="#949494" stroke="black" strokeWidth="4"/>
+              {/* Right socket hole */}
+              <circle cx="115" cy="89" r="9" fill="#949494" stroke="black" strokeWidth="4"/>
+              {/* Top ground pin */}
+              <mask id={`top-mask-${item.id}-${i}`} fill="white">
+                <rect x="83" y="22" width="12" height="12" rx="2"/>
+              </mask>
+              <rect x="83" y="22" width="12" height="12" rx="2" fill="#949494" stroke="black" strokeWidth="8" mask={`url(#top-mask-${item.id}-${i})`}/>
+              {/* Bottom ground pin */}
+              <mask id={`bottom-mask-${item.id}-${i}`} fill="white">
+                <rect x="83" y="143" width="12" height="12" rx="2"/>
+              </mask>
+              <rect x="83" y="143" width="12" height="12" rx="2" fill="#949494" stroke="black" strokeWidth="8" mask={`url(#bottom-mask-${item.id}-${i})`}/>
+            </g>
+          );
+        })}
+
+        {/* Invisible interactive rect for clicking/dragging - matches actual socket layout */}
+        <rect
+          x={stripStartX}
+          y={cy - socketSize / 2}
+          width={totalStripW}
+          height={socketSize}
+          fill="transparent"
+          pointerEvents="auto"
+        />
+      </g>
+    );
+  }
+
+  // DI box — using SVG asset
+  if (label.toLowerCase().includes('di')) {
+    const { halfW, halfH } = getItemBoundingBox(item, w, h);
+    return (
+      <g {...groupProps}>
+        <image
+          x={cx - halfW}
+          y={cy - halfH}
+          width={halfW * 2}
+          height={halfH * 2}
+          href="/assets/DI BOX.svg"
+          pointerEvents="none"
+        />
+        <rect
+          x={cx - halfW}
+          y={cy - halfH}
+          width={halfW * 2}
+          height={halfH * 2}
+          fill="transparent"
+          pointerEvents="auto"
+        />
+      </g>
+    );
+  }
+
+  // Custom block — label inside, always upright
+  if (item.type === 'custom' && item.shape !== 'circle') {
+    const handleRadius = 3;
+    const handleSize = 6;
+    const handles = [
+      { corner: 'tl' as const, cx: cx - w / 2, cy: cy - h / 2, cursor: 'nwse-resize' },
+      { corner: 'tr' as const, cx: cx + w / 2, cy: cy - h / 2, cursor: 'nesw-resize' },
+      { corner: 'bl' as const, cx: cx - w / 2, cy: cy + h / 2, cursor: 'nesw-resize' },
+      { corner: 'br' as const, cx: cx + w / 2, cy: cy + h / 2, cursor: 'nwse-resize' },
+    ];
+
+    return (
+      <g {...groupProps}>
+        <rect x={cx - w / 2} y={cy - h / 2} width={w} height={h} rx={3} fill="#D9D9D9" stroke="black" strokeWidth={1} />
+        <text x={cx} y={cy + 4} textAnchor="middle" fontSize={9} fill="#1e293b" fontFamily="system-ui,sans-serif" fontWeight="600" pointerEvents="none"
+          transform={`rotate(${-rotDeg}, ${cx}, ${cy})`}>
+          {shortLabel}
+        </text>
+        {isSelected && editable && !isGhost && handles.map(({ corner, cx: hx, cy: hy, cursor: cur }) => (
+          <rect
+            key={`handle-${corner}`}
+            x={hx - handleRadius}
+            y={hy - handleRadius}
+            width={handleSize}
+            height={handleSize}
+            rx={1}
+            fill="white"
+            stroke={sel}
+            strokeWidth={1.5}
+            style={{ cursor: cur }}
+            pointerEvents="auto"
+            onPointerDown={(e) => {
+              e.stopPropagation();
+              onResizePointerDown?.(e, item, corner);
+            }}
+          />
+        ))}
+      </g>
+    );
+  }
+
+  // Custom circle — label inside, always upright
+  if (item.type === 'custom' && item.shape === 'circle') {
+    const handleRadius = 3;
+    const handleSize = 6;
+    const r = Math.min(w, h) / 2;
+    const handles = [
+      { corner: 'tl' as const, cx: cx - r, cy: cy - r, cursor: 'nwse-resize' },
+      { corner: 'tr' as const, cx: cx + r, cy: cy - r, cursor: 'nesw-resize' },
+      { corner: 'bl' as const, cx: cx - r, cy: cy + r, cursor: 'nesw-resize' },
+      { corner: 'br' as const, cx: cx + r, cy: cy + r, cursor: 'nwse-resize' },
+    ];
+
+    return (
+      <g {...groupProps}>
+        <circle cx={cx} cy={cy} r={r} fill="#D9D9D9" stroke="black" strokeWidth={1} />
+        <text x={cx} y={cy + 4} textAnchor="middle" fontSize={9} fill="#1e293b" fontFamily="system-ui,sans-serif" fontWeight="600" pointerEvents="none"
+          transform={`rotate(${-rotDeg}, ${cx}, ${cy})`}>
+          {shortLabel}
+        </text>
+        {isSelected && editable && !isGhost && handles.map(({ corner, cx: hx, cy: hy, cursor: cur }) => (
+          <rect
+            key={`handle-${corner}`}
+            x={hx - handleRadius}
+            y={hy - handleRadius}
+            width={handleSize}
+            height={handleSize}
+            rx={1}
+            fill="white"
+            stroke={sel}
+            strokeWidth={1.5}
+            style={{ cursor: cur }}
+            pointerEvents="auto"
+            onPointerDown={(e) => {
+              e.stopPropagation();
+              onResizePointerDown?.(e, item, corner);
+            }}
+          />
+        ))}
+      </g>
+    );
+  }
+
+  // Default rect (instruments, pedals, etc.)
+  return (
+    <g {...groupProps}>
+      <rect
+        x={cx - w / 2}
+        y={cy - h / 2}
+        width={w}
+        height={h}
+        rx={3}
+        fill={config.color}
+        stroke="rgba(0,0,0,0.35)"
+        strokeWidth={1}
+      />
+    </g>
+  );
+}
+
+// Renders only the selection border for an item, always on top of everything.
+function SelectionOverlay({ item, labelDimensions }: {
+  item: StageItem;
+  labelDimensions: Record<string, { width: number; height: number }>;
+}) {
+  const config = getItemConfig(item);
+  const cx = pctX(item.x);
+  const cy = pctY(item.y);
+  const w = Math.max(mW(config.width), 16);
+  const h = Math.max(mH(config.depth), 12);
+  const rotDeg = ((item.rotation || 0) * 180) / Math.PI;
+  const sel = '#818cf8';
+  const label = (item.label || '').toLowerCase();
+
+  const wrap = (child: React.ReactNode) => (
+    <g transform={`rotate(${rotDeg}, ${cx}, ${cy})`} pointerEvents="none">{child}</g>
+  );
+  const dr = (x: number, y: number, rw: number, rh: number, rx = 2) => (
+    <rect x={x} y={y} width={rw} height={rh} rx={rx} fill="none" stroke={sel} strokeWidth={2} strokeDasharray="4 2" />
+  );
+  const dc = (r: number) => (
+    <circle cx={cx} cy={cy} r={r} fill="none" stroke={sel} strokeWidth={2} strokeDasharray="5 2" />
+  );
+
+  if (config.shape === 'person') return wrap(dc(Math.min(w, h) / 2));
+  if (item.type === 'monitor') { const { halfW, halfH } = getItemBoundingBox(item, w, h); return wrap(dr(cx - halfW - 2, cy - halfH - 2, halfW * 2 + 4, halfH * 2 + 4)); }
+  if (label.includes('mic')) { const { halfW, halfH } = getItemBoundingBox(item, w, h); return wrap(dr(cx - halfW - 2, cy - halfH - 2, halfW * 2 + 4, halfH * 2 + 4)); }
+  if (config.shape === 'pole' || item.type === 'stand') return wrap(dc(Math.min(w, h) / 2));
+  if (item.customWidth === 0 && item.customDepth === 0) {
+    const dims = labelDimensions[item.id];
+    const rw = dims ? dims.width + 8 : 64;
+    const rh = dims ? dims.height + 6 : 22;
+    return wrap(dr(cx - rw / 2, cy - rh / 2, rw, rh, 3));
+  }
+  if (label.includes('drum')) { const { halfW, halfH } = getItemBoundingBox(item, w, h); return wrap(dr(cx - halfW - 2, cy - halfH - 2, halfW * 2 + 4, halfH * 2 + 4)); }
+  if (label.includes('kit')) return wrap(dr(cx - w / 2, cy - h / 2, w, h, 4));
+  if (label.includes('keys')) { const { halfW, halfH } = getItemBoundingBox(item, w, h); return wrap(dr(cx - halfW - 2, cy - halfH - 2, halfW * 2 + 4, halfH * 2 + 4)); }
+  if (label.includes('amp')) { const { halfW, halfH } = getItemBoundingBox(item, w, h); return wrap(dr(cx - halfW - 2, cy - halfH - 2, halfW * 2 + 4, halfH * 2 + 4)); }
+  if (item.type === 'power') {
+    const socketSize = Math.min(h, 40) * 0.75;
+    const totalW = (item.quantity || 1) * socketSize;
+    return wrap(dr(cx - totalW / 2 - 2, cy - socketSize / 2 - 2, totalW + 4, socketSize + 4, 5));
+  }
+  if (label.includes('di')) { const { halfW, halfH } = getItemBoundingBox(item, w, h); return wrap(dr(cx - halfW - 2, cy - halfH - 2, halfW * 2 + 4, halfH * 2 + 4)); }
+  if (item.type === 'custom' && item.shape === 'circle') return wrap(dc(Math.min(w, h) / 2));
+  if (item.type === 'custom') return wrap(dr(cx - w / 2, cy - h / 2, w, h, 3));
+  // Default
+  const { halfW, halfH } = getItemBoundingBox(item, w, h);
+  return wrap(dr(cx - halfW - 2, cy - halfH - 2, halfW * 2 + 4, halfH * 2 + 4));
+}
+
+export interface StagePlot2DCanvasHandle {
+  selectMember: (memberId: string) => void;
+}
+
+export interface StagePlot2DCanvasProps {
+  items: StageItem[];
+  setItems: (items: StageItem[]) => void;
+  editable: boolean;
+  ghostItems?: StageItem[];
+  members: BandMember[];
+  onRotateItem?: (id: string, dir: 'left' | 'right') => void;
+  onMoveToFront?: (id: string) => void;
+  onMoveToBack?: (id: string) => void;
+  onUpdateMemberName?: (memberId: string, name: string) => void;
+  onUpdateMemberColor?: (memberId: string, colorIndex: number) => void;
+  exportRef?: React.RefObject<SVGSVGElement | null>;
+}
+
+export const StagePlot2DCanvas = React.forwardRef<StagePlot2DCanvasHandle, StagePlot2DCanvasProps>(({
+  items,
+  setItems,
+  editable,
+  ghostItems = [],
+  members,
+  onRotateItem,
+  onMoveToFront,
+  onMoveToBack,
+  onUpdateMemberName,
+  onUpdateMemberColor,
+  exportRef,
+}, ref) => {
+  const svgRef = useRef<SVGSVGElement>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+
+  useImperativeHandle(ref, () => ({
+    selectMember(memberId: string) {
+      const ids = itemsRef.current.filter(i => i.memberId === memberId).map(i => i.id);
+      setSelectedIds(new Set(ids));
+    },
+  }));
+  const [marquee, setMarquee] = useState<{ x1: number; y1: number; x2: number; y2: number } | null>(null);
+  const marqueeMovedRef = useRef(false);
+  const [dragging, setDragging] = useState<{ offsets: Map<string, { ox: number; oy: number }> } | null>(null);
+  const [resizing, setResizing] = useState<{
+    id: string;
+    corner: 'tl' | 'tr' | 'bl' | 'br';
+    fixedCornerX: number;  // SVG coords of the fixed corner
+    fixedCornerY: number;
+  } | null>(null);
+  const [menuBarPos, setMenuBarPos] = useState<{ top: number; left: number } | null>(null);
+  const [editingLabel, setEditingLabel] = useState<string | null>(null);
+  const [labelEditText, setLabelEditText] = useState('');
+  const [colorPickerOpen, setColorPickerOpen] = useState(false);
+  const labelInputRef = useRef<HTMLInputElement>(null);
+  const menuBarRef = useRef<HTMLDivElement>(null);
+  const itemsRef = useRef(items);
+  itemsRef.current = items;
+
+  // Derive a single selectedId for single-selection toolbar compatibility
+  const selectedId = selectedIds.size === 1 ? [...selectedIds][0] : null;
+
+  // Close color picker when selection changes
+  React.useEffect(() => { setColorPickerOpen(false); }, [selectedId]);
+
+  // Store refs to label text elements and their measured dimensions
+  const labelTextRefsMap = useRef<Map<string, SVGTextElement>>(new Map());
+  const [labelDimensions, setLabelDimensions] = useState<Record<string, { width: number; height: number }>>({});
+
+  const setSvgRef = useCallback((el: SVGSVGElement | null) => {
+    (svgRef as React.MutableRefObject<SVGSVGElement | null>).current = el;
+    if (exportRef) (exportRef as React.MutableRefObject<SVGSVGElement | null>).current = el;
+  }, [exportRef]);
+
+  // Track selected item's x/y for menu bar repositioning during drag (but not rotation)
+  const selectedItemPos = items.find(i => i.id === selectedId);
+  const selectedPosX = selectedItemPos?.x;
+  const selectedPosY = selectedItemPos?.y;
+
+  // Measure label text dimensions using getBBox()
+  useLayoutEffect(() => {
+    const measured: Record<string, { width: number; height: number }> = {};
+    labelTextRefsMap.current.forEach((textEl, itemId) => {
+      try {
+        const bbox = textEl.getBBox();
+        measured[itemId] = {
+          width: bbox.width,
+          height: bbox.height,
+        };
+      } catch (e) {
+        // Element might not be rendered yet
+      }
+    });
+    if (Object.keys(measured).length > 0) {
+      setLabelDimensions(measured);
+    }
+  }, [items]);
+
+  // Calculate menu bar position above selected item
+  React.useEffect(() => {
+    if (!selectedId || !svgRef.current) {
+      setMenuBarPos(null);
+      return;
+    }
+
+    const selectedItem = itemsRef.current.find(i => i.id === selectedId);
+    if (!selectedItem) {
+      setMenuBarPos(null);
+      return;
+    }
+
+    const svg = svgRef.current;
+    const container = svg.parentElement;
+    if (!container) return;
+
+    const svgRect = svg.getBoundingClientRect();
+    const containerRect = container.getBoundingClientRect();
+
+    // SVG element's position relative to its container
+    const svgOffsetX = svgRect.left - containerRect.left;
+    const svgOffsetY = svgRect.top - containerRect.top;
+
+    // Item position as percentage (0-100)
+    const itemPctX = selectedItem.x;
+    const itemPctY = selectedItem.y;
+
+    // Get item's bounding box to find top edge
+    const config = getItemConfig(selectedItem);
+    const w = mW(selectedItem.customWidth ?? config.width);
+    const h = mH(selectedItem.customDepth ?? config.depth);
+    const bbox = getItemBoundingBox(selectedItem, w, h);
+
+    // Account for preserveAspectRatio="xMidYMid meet": SVG content may not fill the full element rect
+    const svgAR = SVG_W / SVG_H;
+    const elementAR = svgRect.width / svgRect.height;
+    let contentWidth: number, contentHeight: number, contentOffsetX: number, contentOffsetY: number;
+    if (elementAR > svgAR) {
+      // Pillar-boxed: content fills full height, centered horizontally
+      contentHeight = svgRect.height;
+      contentWidth = contentHeight * svgAR;
+      contentOffsetX = (svgRect.width - contentWidth) / 2;
+      contentOffsetY = 0;
+    } else {
+      // Letter-boxed: content fills full width, centered vertically
+      contentWidth = svgRect.width;
+      contentHeight = contentWidth / svgAR;
+      contentOffsetX = 0;
+      contentOffsetY = (svgRect.height - contentHeight) / 2;
+    }
+
+    // Convert percentage to content pixels
+    const itemPixelX = (itemPctX / 100) * contentWidth;
+    const itemPixelY = (itemPctY / 100) * contentHeight;
+
+    // Account for rotation: use AABB half-height of rotated bbox
+    const angle = selectedItem.rotation || 0; // radians
+    const cosA = Math.abs(Math.cos(angle));
+    const sinA = Math.abs(Math.sin(angle));
+    const rotatedHalfH = bbox.halfW * sinA + bbox.halfH * cosA;
+
+    // Scale bbox from SVG units to screen pixels
+    const rotatedHalfHScreen = rotatedHalfH * (contentHeight / SVG_H);
+
+    const MENU_GAP = 18;
+    const menuBarHeight = menuBarRef.current?.offsetHeight ?? 34;
+    const menuBarWidth = menuBarRef.current?.offsetWidth ?? 0;
+    let relativeLeft = svgOffsetX + contentOffsetX + itemPixelX;
+    // Subtract menuBarHeight so the bottom edge of the menu is MENU_GAP above the item (symmetric with bottom)
+    let relativeTop = svgOffsetY + contentOffsetY + itemPixelY - rotatedHalfHScreen - MENU_GAP - menuBarHeight;
+
+    // If menu would be off-screen on top, flip it below the item
+    if (relativeTop < 0) {
+      relativeTop = svgOffsetY + contentOffsetY + itemPixelY + rotatedHalfHScreen + MENU_GAP;
+    }
+
+    // Constrain horizontal position to keep menu bar on screen
+    // Menu bar is centered on relativeLeft via transform: translateX(-50%)
+    if (menuBarWidth > 0) {
+      const menuBarHalfWidth = menuBarWidth / 2;
+      const leftEdge = relativeLeft - menuBarHalfWidth;
+      const rightEdge = relativeLeft + menuBarHalfWidth;
+
+      // If menu goes off-screen on left, shift right
+      if (leftEdge < 0) {
+        relativeLeft = menuBarHalfWidth;
+      }
+
+      // If menu goes off-screen on right, shift left
+      if (rightEdge > containerRect.width) {
+        relativeLeft = containerRect.width - menuBarHalfWidth;
+      }
+    }
+
+    setMenuBarPos({ top: relativeTop, left: relativeLeft });
+  }, [selectedId, selectedPosX, selectedPosY]); // excludes rotation — position only recalculates on selection or drag
+
+  const toSvgCoords = useCallback((clientX: number, clientY: number) => {
+    const svg = svgRef.current;
+    if (!svg) return { x: 0, y: 0 };
+    const rect = svg.getBoundingClientRect();
+    return {
+      x: ((clientX - rect.left) / rect.width) * SVG_W,
+      y: ((clientY - rect.top) / rect.height) * SVG_H,
+    };
+  }, []);
+
+  const handleItemPointerDown = useCallback((e: React.PointerEvent, item: StageItem) => {
+    if (!editable) return;
+    e.stopPropagation();
+    (e.currentTarget as Element).setPointerCapture(e.pointerId);
+
+    const isAlreadySelected = selectedIds.has(item.id);
+    let newIds: Set<string>;
+    if (e.shiftKey) {
+      newIds = new Set(selectedIds);
+      if (isAlreadySelected) {
+        newIds.delete(item.id);
+      } else {
+        newIds.add(item.id);
+      }
+    } else if (isAlreadySelected) {
+      newIds = selectedIds; // keep group
+    } else {
+      newIds = new Set([item.id]);
+    }
+    setSelectedIds(newIds);
+
+    const { x, y } = toSvgCoords(e.clientX, e.clientY);
+    const offsets = new Map<string, { ox: number; oy: number }>();
+    for (const id of newIds) {
+      const it = itemsRef.current.find(i => i.id === id);
+      if (it) offsets.set(id, { ox: x - pctX(it.x), oy: y - pctY(it.y) });
+    }
+    setDragging({ offsets });
+  }, [editable, toSvgCoords, selectedIds]);
+
+  const handleResizePointerDown = useCallback((e: React.PointerEvent, item: StageItem, corner: 'tl' | 'tr' | 'bl' | 'br') => {
+    if (!editable) return;
+    e.stopPropagation();
+    (e.currentTarget as Element).setPointerCapture(e.pointerId);
+    setSelectedIds(new Set([item.id]));
+    const config = getItemConfig(item);
+    const w = mW(item.customWidth ?? config.width);
+    const h = mH(item.customDepth ?? config.depth);
+    const cx = pctX(item.x);
+    const cy = pctY(item.y);
+
+    // Calculate the fixed corner (opposite to the one being dragged)
+    let fixedCornerX: number, fixedCornerY: number;
+    if (corner === 'br') {
+      fixedCornerX = cx - w / 2;
+      fixedCornerY = cy - h / 2;
+    } else if (corner === 'bl') {
+      fixedCornerX = cx + w / 2;
+      fixedCornerY = cy - h / 2;
+    } else if (corner === 'tr') {
+      fixedCornerX = cx - w / 2;
+      fixedCornerY = cy + h / 2;
+    } else { // tl
+      fixedCornerX = cx + w / 2;
+      fixedCornerY = cy + h / 2;
+    }
+
+    setResizing({ id: item.id, corner, fixedCornerX, fixedCornerY });
+  }, [editable, toSvgCoords]);
+
+  const handleSvgPointerMove = useCallback((e: React.PointerEvent) => {
+    const { x, y } = toSvgCoords(e.clientX, e.clientY);
+
+    // Handle resizing
+    if (resizing) {
+      const fixedX = resizing.fixedCornerX;
+      const fixedY = resizing.fixedCornerY;
+      const minW = mW(0.2);
+      const minH = mH(0.2);
+      const resizingItem = items.find(it => it.id === resizing.id);
+      const isCircle = resizingItem?.type === 'custom' && resizingItem?.shape === 'circle';
+
+      // Constrain cursor position to respect minimum size
+      let draggedX = x;
+      let draggedY = y;
+
+      if (isCircle) {
+        // For circles, use the maximum distance to maintain circular shape
+        const distX = Math.abs(draggedX - fixedX);
+        const distY = Math.abs(draggedY - fixedY);
+        const maxDist = Math.max(distX, distY);
+        const minDist = mW(0.2);
+        const constrainedDist = Math.max(maxDist, minDist);
+
+        // Set dragged point to maintain circle shape
+        draggedX = draggedX < fixedX ? fixedX - constrainedDist : fixedX + constrainedDist;
+        draggedY = draggedY < fixedY ? fixedY - constrainedDist : fixedY + constrainedDist;
+      } else {
+        // Ensure minimum width constraint
+        if (draggedX < fixedX) {
+          draggedX = Math.min(draggedX, fixedX - minW);
+        } else {
+          draggedX = Math.max(draggedX, fixedX + minW);
+        }
+
+        // Ensure minimum height constraint
+        if (draggedY < fixedY) {
+          draggedY = Math.min(draggedY, fixedY - minH);
+        } else {
+          draggedY = Math.max(draggedY, fixedY + minH);
+        }
+      }
+
+      // Calculate dimensions (always positive)
+      let newW = Math.abs(draggedX - fixedX);
+      let newH = Math.abs(draggedY - fixedY);
+
+      // For circles, ensure width equals height
+      if (isCircle) {
+        const size = Math.max(newW, newH);
+        newW = newH = size;
+      }
+
+      // Calculate new center position
+      const newCenterX = (fixedX + draggedX) / 2;
+      const newCenterY = (fixedY + draggedY) / 2;
+      const newItemX = svgXToP(newCenterX);
+      const newItemY = svgYToP(newCenterY);
+
+      // Convert dimensions back to meters
+      const newCustomWidth = (newW / SVG_W) * STAGE_WIDTH;
+      const newCustomDepth = (newH / SVG_H) * STAGE_DEPTH;
+
+      setItems(items.map(it => it.id === resizing.id
+        ? { ...it, x: newItemX, y: newItemY, customWidth: newCustomWidth, customDepth: newCustomDepth }
+        : it
+      ));
+      return;
+    }
+
+    // Handle dragging (group)
+    if (dragging) {
+      // Compute desired positions for all dragging items
+      const desired = new Map<string, { nx: number; ny: number }>();
+      for (const [id, off] of dragging.offsets) {
+        desired.set(id, { nx: svgXToP(x - off.ox), ny: svgYToP(y - off.oy) });
+      }
+
+      // Find the most restrictive boundary across all items, then shift the whole group
+      let adjX = 0;
+      let adjY = 0;
+      for (const { nx, ny } of desired.values()) {
+        if (nx < 0) adjX = Math.max(adjX, -nx);
+        if (ny < 0) adjY = Math.max(adjY, -ny);
+      }
+      for (const { nx, ny } of desired.values()) {
+        if (nx + adjX > 100) adjX = Math.min(adjX, 100 - nx);
+        if (ny + adjY > 100) adjY = Math.min(adjY, 100 - ny);
+      }
+
+      setItems(items.map(it => {
+        const d = desired.get(it.id);
+        if (!d) return it;
+        return { ...it, x: d.nx + adjX, y: d.ny + adjY };
+      }));
+      return;
+    }
+
+    // Handle marquee
+    if (marquee) {
+      marqueeMovedRef.current = true;
+      setMarquee(prev => prev ? { ...prev, x2: x, y2: y } : null);
+    }
+  }, [dragging, resizing, marquee, toSvgCoords, items, setItems]);
+
+  const handleSvgPointerDown = useCallback((e: React.PointerEvent) => {
+    if (!editable) return;
+    marqueeMovedRef.current = false;
+    const { x, y } = toSvgCoords(e.clientX, e.clientY);
+    setMarquee({ x1: x, y1: y, x2: x, y2: y });
+    (e.currentTarget as Element).setPointerCapture(e.pointerId);
+  }, [editable, toSvgCoords]);
+
+  const handleSvgPointerUp = useCallback(() => {
+    setDragging(null);
+    setResizing(null);
+    if (marquee) {
+      if (marqueeMovedRef.current) {
+        const minX = Math.min(marquee.x1, marquee.x2);
+        const maxX = Math.max(marquee.x1, marquee.x2);
+        const minY = Math.min(marquee.y1, marquee.y2);
+        const maxY = Math.max(marquee.y1, marquee.y2);
+        const hit = itemsRef.current
+          .filter(it => {
+            const cx = pctX(it.x);
+            const cy = pctY(it.y);
+            return cx >= minX && cx <= maxX && cy >= minY && cy <= maxY;
+          })
+          .map(it => it.id);
+        setSelectedIds(new Set(hit));
+      } else {
+        setSelectedIds(new Set());
+      }
+      setMarquee(null);
+    }
+  }, [marquee]);
+
+  const deleteSelected = useCallback(() => {
+    if (selectedIds.size === 0) return;
+    setItems(items.filter(i => !selectedIds.has(i.id)));
+    setSelectedIds(new Set());
+  }, [selectedId, items, setItems]);
+
+  const ROTATION_STEP = 22.5 * (Math.PI / 180);
+
+  const rotateSelectedItems = useCallback((dir: 'left' | 'right') => {
+    if (selectedIds.size === 0) return;
+    const step = dir === 'right' ? ROTATION_STEP : -ROTATION_STEP;
+    const selected = items.filter(i => selectedIds.has(i.id));
+    if (selected.length === 0) return;
+
+    if (selected.length === 1) {
+      // Single item: delegate to parent callback (keeps existing behaviour)
+      onRotateItem?.(selected[0].id, dir);
+      return;
+    }
+
+    // Group: rotate each item's position around the group centroid, and spin each item
+    const cx = selected.reduce((s, i) => s + i.x, 0) / selected.length;
+    const cy = selected.reduce((s, i) => s + i.y, 0) / selected.length;
+    const cos = Math.cos(step);
+    const sin = Math.sin(step);
+
+    setItems(items.map(it => {
+      if (!selectedIds.has(it.id)) return it;
+      const dx = it.x - cx;
+      const dy = it.y - cy;
+      const newX = cx + dx * cos - dy * sin;
+      const newY = cy + dx * sin + dy * cos;
+      const next = (it.rotation || 0) + step;
+      const norm = ((next % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
+      return { ...it, x: newX, y: newY, rotation: norm };
+    }));
+  }, [selectedIds, items, setItems, onRotateItem]);
+
+  const updateSocketCount = useCallback((delta: number) => {
+    if (!selectedId) return;
+    setItems(items.map(i => {
+      if (i.id === selectedId && i.type === 'power') {
+        const newQuantity = Math.max(1, (i.quantity || 1) + delta);
+        return { ...i, quantity: newQuantity };
+      }
+      return i;
+    }));
+  }, [selectedId, items, setItems]);
+
+  const updateLabelInProgress = useCallback((newLabel: string) => {
+    if (!selectedId) return;
+    setLabelEditText(newLabel);
+    setItems(items.map(i => {
+      if (i.id === selectedId) {
+        return { ...i, label: newLabel };
+      }
+      return i;
+    }));
+  }, [selectedId, items, setItems]);
+
+  const saveLabel = useCallback((newLabel: string) => {
+    if (!selectedId) return;
+    setItems(items.map(i => {
+      if (i.id === selectedId) {
+        return { ...i, label: newLabel };
+      }
+      return i;
+    }));
+    setEditingLabel(null);
+    setLabelEditText('');
+  }, [selectedId, items, setItems]);
+
+  const startEditLabel = useCallback(() => {
+    const item = items.find(i => i.id === selectedId);
+    if (item) {
+      setEditingLabel(selectedId);
+      setLabelEditText(item.label || '');
+      // Focus input on next render
+      setTimeout(() => labelInputRef.current?.focus(), 0);
+    }
+  }, [selectedId, items]);
+
+  const selectedItem = items.find(i => i.id === selectedId);
+
+  // All items have their own selection borders drawn within ItemShape
+  const selectionRing = null;
+
+  return (
+    <div className="relative w-full h-full select-none">
+      <svg
+        ref={setSvgRef}
+        viewBox={`0 0 ${SVG_W} ${SVG_H}`}
+        className="w-full h-full"
+        data-export-svg="true"
+        onPointerDown={handleSvgPointerDown}
+        onPointerMove={handleSvgPointerMove}
+        onPointerUp={handleSvgPointerUp}
+        style={{ touchAction: 'none' }}
+      >
+        {/* Stage floor */}
+        <rect x={0} y={0} width={SVG_W} height={SVG_H} fill="white" />
+        <rect x={0} y={0} width={SVG_W} height={SVG_H - 44} fill="white" />
+
+        {/* 1m grid */}
+        {[100, 200, 300, 400, 500, 600, 700].map(x => (
+          <line key={`v${x}`} x1={x} y1={0} x2={x} y2={SVG_H - 44} stroke="#e5e7eb" strokeWidth={0.75} />
+        ))}
+        {[100, 200, 300, 400].map(y => (
+          <line key={`h${y}`} x1={0} y1={y} x2={SVG_W} y2={y} stroke="#e5e7eb" strokeWidth={0.75} />
+        ))}
+
+        {/* Stage edge */}
+        <line x1={0} y1={SVG_H - 44} x2={SVG_W} y2={SVG_H - 44} stroke="#4b5563" strokeWidth={1.5} />
+
+        {/* Labels */}
+        <text x={SVG_W / 2} y={SVG_H - 16} textAnchor="middle" fontSize={10} fill="#4b5563" fontFamily="system-ui,sans-serif" letterSpacing={5} fontWeight={600}>
+          AUDIENCE
+        </text>
+
+        {/* Ghost items */}
+        {ghostItems.map(item => (
+          <ItemShape key={`ghost-${item.id}`} item={item} members={members} isGhost={true} isSelected={false} editable={false} labelDimensions={labelDimensions} labelTextRefsMap={labelTextRefsMap} />
+        ))}
+
+        {/* Stage items */}
+        {items.map(item => (
+          <ItemShape key={item.id} item={item} members={members} isGhost={false} isSelected={selectedIds.has(item.id)} editable={editable} onPointerDown={handleItemPointerDown} onResizePointerDown={handleResizePointerDown} labelDimensions={labelDimensions} labelTextRefsMap={labelTextRefsMap} />
+        ))}
+
+        {/* Selection overlays — always rendered on top of all items */}
+        {items.filter(i => selectedIds.has(i.id)).map(item => (
+          <SelectionOverlay key={`sel-${item.id}`} item={item} labelDimensions={labelDimensions} />
+        ))}
+
+        {selectionRing}
+
+        {/* Marquee selection rect */}
+        {marquee && (
+          <rect
+            x={Math.min(marquee.x1, marquee.x2)}
+            y={Math.min(marquee.y1, marquee.y2)}
+            width={Math.abs(marquee.x2 - marquee.x1)}
+            height={Math.abs(marquee.y2 - marquee.y1)}
+            fill="rgba(129,140,248,0.1)"
+            stroke="#818cf8"
+            strokeWidth={1}
+            strokeDasharray="4 2"
+            pointerEvents="none"
+          />
+        )}
+      </svg>
+
+      {/* Multi-selection toolbar */}
+      {selectedIds.size > 1 && editable && (
+        <div className="absolute top-2 left-1/2 -translate-x-1/2 flex items-center gap-1.5 bg-white/95 backdrop-blur border border-slate-200 rounded-lg px-3 py-1.5 shadow-xl z-10 pointer-events-auto">
+          <span className="text-xs text-slate-500 font-medium mr-1">{selectedIds.size} selected</span>
+          {![...selectedIds].every(id => items.find(i => i.id === id)?.memberId) && (
+            <>
+              <button onClick={() => rotateSelectedItems('left')} className="p-1.5 hover:bg-slate-100 rounded transition-colors" title="Rotate group left">
+                <RotateCcw size={13} className="text-slate-600" />
+              </button>
+              <button onClick={() => rotateSelectedItems('right')} className="p-1.5 hover:bg-slate-100 rounded transition-colors" title="Rotate group right">
+                <RotateCw size={13} className="text-slate-600" />
+              </button>
+              <div className="w-px h-4 bg-slate-200 mx-0.5" />
+            </>
+          )}
+          <button onClick={deleteSelected} className="p-1.5 hover:bg-red-50 rounded transition-colors" title="Delete all selected">
+            <Trash2 size={13} className="text-red-500" />
+          </button>
+        </div>
+      )}
+
+      {/* Selected item toolbar */}
+      {selectedItem && editable && menuBarPos && (
+        <div
+          ref={menuBarRef}
+          className="absolute flex items-center gap-0.5 bg-white/95 backdrop-blur border border-slate-200 rounded-lg px-2 py-1 shadow-xl z-10 pointer-events-auto"
+          style={{
+            left: `${menuBarPos.left}px`,
+            top: `${menuBarPos.top}px`,
+            transform: 'translateX(-50%)',
+          }}
+        >
+          {selectedItem.memberId ? (() => {
+            const member = members.find(m => m.id === selectedItem.memberId);
+            if (!member) return null;
+            const currentColor = MEMBER_COLORS[member.colorIndex % MEMBER_COLORS.length];
+            return (
+              <>
+                {editingLabel === selectedItem.id ? (
+                  <input
+                    ref={labelInputRef}
+                    type="text"
+                    defaultValue={member.name}
+                    onChange={e => onUpdateMemberName?.(member.id, e.target.value)}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter' || e.key === 'Escape') setEditingLabel(null);
+                    }}
+                    onBlur={() => setEditingLabel(null)}
+                    className="text-xs bg-slate-50 border border-slate-300 rounded px-2 py-0.5 text-slate-700 focus:outline-none focus:border-slate-400 max-w-[120px] mr-2"
+                    autoFocus
+                  />
+                ) : (
+                  <>
+                    <span className="text-xs text-slate-600 mr-2 max-w-[120px] truncate font-medium">{member.name || 'Unnamed'}</span>
+                    <button onClick={() => { setEditingLabel(selectedItem.id); setColorPickerOpen(false); }} className="p-1.5 hover:bg-slate-100 rounded transition-colors" title="Edit name">
+                      <Edit size={13} className="text-slate-500" />
+                    </button>
+                  </>
+                )}
+                <div className="w-px h-4 bg-slate-200 mx-0.5" />
+                {colorPickerOpen ? (
+                  <div className="flex items-center gap-1">
+                    {MEMBER_COLORS.map((c, i) => (
+                      <button
+                        key={i}
+                        className={`w-3.5 h-3.5 rounded-full transition-transform hover:scale-110 ${member.colorIndex === i ? 'ring-2 ring-offset-1 ring-slate-700' : ''}`}
+                        style={{ backgroundColor: c }}
+                        onClick={() => { onUpdateMemberColor?.(member.id, i); setColorPickerOpen(false); }}
+                        title={`Color ${i + 1}`}
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <button
+                    className="w-3.5 h-3.5 rounded-full mx-1 ring-2 ring-offset-1 ring-slate-300 hover:ring-slate-500 transition-all"
+                    style={{ backgroundColor: currentColor }}
+                    onClick={() => setColorPickerOpen(true)}
+                    title="Change color"
+                  />
+                )}
+              </>
+            );
+          })() : (
+            <>
+              {editingLabel === selectedItem.id ? (
+                <input
+                  ref={labelInputRef}
+                  type="text"
+                  value={labelEditText}
+                  onChange={(e) => updateLabelInProgress(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      saveLabel(labelEditText);
+                    } else if (e.key === 'Escape') {
+                      setEditingLabel(null);
+                      setLabelEditText('');
+                    }
+                  }}
+                  onBlur={() => {
+                    if (labelEditText) {
+                      saveLabel(labelEditText);
+                    } else {
+                      setEditingLabel(null);
+                    }
+                  }}
+                  className="text-xs bg-slate-50 border border-slate-300 rounded px-2 py-0.5 text-slate-700 focus:outline-none focus:border-slate-400 max-w-[120px] mr-2"
+                  autoFocus
+                />
+              ) : (
+                <>
+                  <span className="text-xs text-slate-600 mr-2 max-w-[120px] truncate font-medium">{selectedItem.label || 'Item'}</span>
+                  <button onClick={startEditLabel} className="p-1.5 hover:bg-slate-100 rounded transition-colors" title="Edit label">
+                    <Edit size={13} className="text-slate-500" />
+                  </button>
+                </>
+              )}
+              <button onClick={() => rotateSelectedItems('left')} className="p-1.5 hover:bg-slate-100 rounded transition-colors" title="Rotate left">
+                <RotateCcw size={13} className="text-slate-500" />
+              </button>
+              <button onClick={() => rotateSelectedItems('right')} className="p-1.5 hover:bg-slate-100 rounded transition-colors" title="Rotate right">
+                <RotateCw size={13} className="text-slate-500" />
+              </button>
+            </>
+          )}
+          {selectedItem.type === 'power' && (
+            <>
+              <div className="w-px h-4 bg-slate-200 mx-1" />
+              <button onClick={() => updateSocketCount(-1)} className="p-1.5 hover:bg-slate-100 rounded transition-colors" title="Remove socket">
+                <Minus size={13} className="text-slate-500" />
+              </button>
+              <button onClick={() => updateSocketCount(1)} className="p-1.5 hover:bg-slate-100 rounded transition-colors" title="Add socket">
+                <Plus size={13} className="text-slate-500" />
+              </button>
+            </>
+          )}
+          <div className="w-px h-4 bg-slate-200 mx-1" />
+          <button onClick={() => onMoveToFront?.(selectedItem.id)} className="p-1.5 hover:bg-slate-100 rounded transition-colors" title="Bring to front">
+            <ArrowUp size={13} className="text-slate-500" />
+          </button>
+          <button onClick={() => onMoveToBack?.(selectedItem.id)} className="p-1.5 hover:bg-slate-100 rounded transition-colors" title="Send to back">
+            <ArrowDown size={13} className="text-slate-500" />
+          </button>
+          <div className="w-px h-4 bg-slate-200 mx-1" />
+          <button onClick={deleteSelected} className="p-1.5 hover:bg-red-50 rounded transition-colors" title="Delete">
+            <Trash2 size={13} className="text-red-500" />
+          </button>
+        </div>
+      )}
+    </div>
+  );
+});
+StagePlot2DCanvas.displayName = 'StagePlot2DCanvas';
