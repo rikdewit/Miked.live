@@ -24,11 +24,13 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
   const [resetSent, setResetSent] = useState(false)
+  const [signUpSent, setSignUpSent] = useState(false)
 
   const switchView = (next: AuthView) => {
     setView(next)
     setError('')
     setResetSent(false)
+    setSignUpSent(false)
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -44,11 +46,17 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           return
         }
 
-        const { error: signUpError } = await supabase.auth.signUp({ email, password })
+        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({ email, password })
 
         if (signUpError) {
           setError(signUpError.message)
           setIsLoading(false)
+          return
+        }
+
+        // If session is null, email confirmation is required
+        if (!signUpData.session) {
+          setSignUpSent(true)
           return
         }
 
@@ -135,7 +143,20 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         </div>
 
         {/* Content */}
-        {resetSent ? (
+        {signUpSent ? (
+          <div className="p-6 text-center space-y-3">
+            <p className="text-sm font-medium text-slate-800">Check your email</p>
+            <p className="text-sm text-slate-500">
+              We sent a confirmation link to <strong>{email}</strong>. Click it to activate your account.
+            </p>
+            <button
+              onClick={() => switchView('sign-in')}
+              className="text-xs text-indigo-600 hover:text-indigo-700 transition-colors"
+            >
+              Back to sign in
+            </button>
+          </div>
+        ) : resetSent ? (
           <div className="p-6 text-center space-y-3">
             <p className="text-sm font-medium text-slate-800">Check your email</p>
             <p className="text-sm text-slate-500">
