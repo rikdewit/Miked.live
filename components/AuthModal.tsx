@@ -56,6 +56,12 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
         // If session is null, email confirmation is required
         if (!signUpData.session) {
+          // Supabase returns identities: [] for already-registered emails (fake success to prevent enumeration)
+          if (signUpData.user?.identities?.length === 0) {
+            setError('An account with this email already exists.')
+            setIsLoading(false)
+            return
+          }
           setSignUpSent(true)
           return
         }
@@ -246,8 +252,17 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
             {/* Error message */}
             {error && (
-              <div className="px-3 py-2 bg-red-50 border border-red-300 rounded text-xs text-red-600">
-                {error}
+              <div className="px-3 py-2 bg-red-50 border border-red-300 rounded text-xs text-red-600 space-y-1">
+                <p>{error}</p>
+                {error === 'An account with this email already exists.' && (
+                  <button
+                    type="button"
+                    onClick={() => switchView('sign-in')}
+                    className="underline text-red-700 hover:text-red-800"
+                  >
+                    Go to sign in
+                  </button>
+                )}
               </div>
             )}
 
